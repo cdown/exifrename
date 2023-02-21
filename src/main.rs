@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -42,18 +43,20 @@ fn get_datetime(path: &PathBuf, exif: &Exif) -> DateTime {
     }
 }
 
-fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> String {
-    let mut out = vec![];
+fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars();
     let mut in_fmt = false;
     let dt = get_datetime(path, exif);
+
+    // Currently cannot go over this, since widest DT field (year) is 2x input
+    let mut out = String::with_capacity(fmt.len() * 2);
 
     while let Some(cur) = chars.next() {
         if !in_fmt {
             if cur == '%' {
                 in_fmt = true;
             } else {
-                out.push(cur.to_string());
+                out.push(cur);
             }
             continue;
         }
@@ -61,28 +64,28 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> String {
         in_fmt = false;
 
         match cur {
-            '%' => out.push("%".to_string()),
-            'Y' => out.push(dt.year.to_string()),
-            'm' => out.push(format!("{:02}", dt.month)),
-            'd' => out.push(format!("{:02}", dt.day)),
-            'H' => out.push(format!("{:02}", dt.hour)),
-            'M' => out.push(format!("{:02}", dt.minute)),
-            'S' => out.push(format!("{:02}", dt.second)),
+            '%' => out.push('%'),
+            'Y' => write!(&mut out, "{:04}", dt.year)?,
+            'm' => write!(&mut out, "{:02}", dt.month)?,
+            'd' => write!(&mut out, "{:02}", dt.day)?,
+            'H' => write!(&mut out, "{:02}", dt.hour)?,
+            'M' => write!(&mut out, "{:02}", dt.minute)?,
+            'S' => write!(&mut out, "{:02}", dt.second)?,
             _ => {
                 eprintln!("ignored unknown format %{}", cur);
-                out.push(format!("%{}", cur))
+                write!(&mut out, "%{}", cur)?
             }
         };
     }
 
-    out.join("")
+    Ok(out)
 }
 
 fn get_new_name(path: &PathBuf, fmt: &str) -> Result<String> {
     let file = File::open(path)?;
     let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
 
-    Ok(render_format(&path, &exif, fmt))
+    render_format(&path, &exif, fmt)
 }
 
 fn main() -> Result<()> {
