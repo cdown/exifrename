@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -5,6 +7,9 @@ use clap::Parser;
 struct Args {
     #[arg(short, long)]
     fmt: String,
+
+    #[arg(value_parser)]
+    files: Vec<PathBuf>,
 }
 
 fn parse_formats(fmt: &str) -> String {
@@ -33,5 +38,8 @@ fn parse_formats(fmt: &str) -> String {
 
 fn main() {
     let args = Args::parse();
-    println!("{}", parse_formats(&args.fmt));
+    for file in args.files {
+        println!("{}", file.display());
+        println!("{}", parse_formats(&args.fmt));
+    }
 }
