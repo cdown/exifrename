@@ -18,7 +18,7 @@ struct Args {
 }
 
 fn get_datetime(path: &PathBuf, exif: &Exif) -> DateTime {
-    if let Some(field) = exif.get_field(Tag::DateTime, In::PRIMARY) {
+    if let Some(field) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
         match field.value {
             Value::Ascii(ref vec) if !vec.is_empty() => {
                 if let Ok(datetime) = DateTime::from_ascii(&vec[0]) {
