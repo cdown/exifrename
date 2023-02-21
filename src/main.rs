@@ -64,6 +64,11 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> String {
         match cur {
             '%' => out.push("%".to_string()),
             'Y' => out.push(dt.year.to_string()),
+            'm' => out.push(format!("{:02}", dt.month)),
+            'd' => out.push(format!("{:02}", dt.day)),
+            'H' => out.push(format!("{:02}", dt.hour)),
+            'M' => out.push(format!("{:02}", dt.minute)),
+            'S' => out.push(format!("{:02}", dt.second)),
             _ => {
                 eprintln!("ignored unknown format %{}", cur);
                 out.push(format!("%{}", cur))
