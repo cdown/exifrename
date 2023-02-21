@@ -17,30 +17,37 @@ struct Args {
     files: Vec<PathBuf>,
 }
 
-fn get_datetime(exif: &Exif) -> Option<DateTime> {
+fn get_datetime(path: &PathBuf, exif: &Exif) -> DateTime {
     if let Some(field) = exif.get_field(Tag::DateTime, In::PRIMARY) {
         match field.value {
             Value::Ascii(ref vec) if !vec.is_empty() => {
                 if let Ok(datetime) = DateTime::from_ascii(&vec[0]) {
-                    return Some(datetime);
+                    return datetime;
                 }
             }
             _ => {}
         }
     }
 
-    None
-}
-
-fn missing_dt(path: &PathBuf) -> u16 {
     eprintln!("{}: missing datetime information", path.display());
-    0
+
+    DateTime {
+        year: 0,
+        month: 0,
+        day: 0,
+        hour: 0,
+        minute: 0,
+        second: 0,
+        nanosecond: None,
+        offset: None,
+    }
 }
 
 fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> String {
     let mut out = vec![];
     let mut chars = fmt.chars();
     let mut in_fmt = false;
+    let dt = get_datetime(path, exif);
 
     while let Some(cur) = chars.next() {
         if !in_fmt {
@@ -56,11 +63,7 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> String {
 
         match cur {
             '%' => out.push("%".to_string()),
-            'Y' => out.push(
-                get_datetime(exif)
-                    .map_or_else(|| missing_dt(path), |d| d.year)
-                    .to_string(),
-            ),
+            'Y' => out.push(dt.year.to_string()),
             _ => {
                 eprintln!("ignored unknown format %{}", cur);
                 out.push(format!("%{}", cur))
