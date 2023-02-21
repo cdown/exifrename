@@ -1,6 +1,14 @@
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    fmt: String,
+}
+
 fn parse_formats(fmt: &str) -> String {
     let mut out = vec![];
-
     let mut chars = fmt.chars().peekable();
 
     while let Some(cur) = chars.next() {
@@ -24,5 +32,6 @@ fn parse_formats(fmt: &str) -> String {
 }
 
 fn main() {
-    println!("{}", parse_formats("abcde%a%a%%%a"));
+    let args = Args::parse();
+    println!("{}", parse_formats(&args.fmt));
 }
