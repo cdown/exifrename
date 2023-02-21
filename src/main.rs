@@ -13,7 +13,6 @@ struct Args {
     #[arg(short, long)]
     fmt: String,
 
-    #[arg(value_parser)]
     files: Vec<PathBuf>,
 }
 
