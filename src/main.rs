@@ -2,6 +2,7 @@ use std::fmt::Write;
 use std::fs;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::process;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -43,6 +44,13 @@ struct Args {
     dry_run: bool,
 
     files: Vec<PathBuf>,
+}
+
+macro_rules! die {
+    ($($arg:tt)*) => {{
+        eprintln!("fatal: {}", format!($($arg)*));
+        process::exit(1);
+    }}
 }
 
 fn get_datetime(exif: &Exif) -> Option<DateTime> {
@@ -100,7 +108,7 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
                     'i' => Tag::PhotographicSensitivity, // TODO: check SensitivityType/0x8830?
                     's' => Tag::ExposureTime, // non-APEX, which has a useful display value
 
-                    _ => panic!("unknown format %{}", cur),
+                    _ => die!("unknown format %{}", cur),
                 };
 
                 let field = exif
@@ -110,6 +118,10 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
                 write!(&mut out, "{}", field.display_value().to_string().replace("/", "_"))?;
             }
         };
+    }
+
+    if in_fmt {
+        die!("unfinished percent string at end of format");
     }
 
     Ok(out)
