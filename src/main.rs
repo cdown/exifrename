@@ -19,6 +19,7 @@ struct Args {
     /// DATETIME:
     ///
     /// %Y  year    (width: 4)
+    /// %y  year    (width: 2)
     /// %m  month   (width: 2)
     /// %d  day     (width: 2)
     /// %H  hour    (width: 2)
@@ -94,6 +95,7 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
 
             // DateTime
             'Y' => write!(&mut out, "{:04}", dt.as_ref().context(nodt)?.year)?,
+            'y' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.year % 100)?,
             'm' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.month)?,
             'd' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.day)?,
             'H' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.hour)?,
