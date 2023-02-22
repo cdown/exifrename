@@ -1,0 +1,3 @@
+# We use some pretty wide calls in DateTime format matching, and it is much
+# harder to read with the default
+fn_call_width = 80

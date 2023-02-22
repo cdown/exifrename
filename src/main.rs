@@ -56,8 +56,6 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
 
         in_fmt = false;
 
-        // rustfmt makes this significantly more difficult to read
-        #[rustfmt::skip]
         match cur {
             '%' => out.push('%'),
 
