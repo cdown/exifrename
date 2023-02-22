@@ -3,7 +3,7 @@ use std::fs;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
@@ -36,7 +36,10 @@ struct Args {
     #[arg(short, long, verbatim_doc_comment)]
     fmt: String,
 
-    #[arg(long, help = "Don't actually rename files, only display what would happen")]
+    #[arg(
+        long,
+        help = "Don't actually rename files, only display what would happen"
+    )]
     dry_run: bool,
 
     files: Vec<PathBuf>,
@@ -57,14 +60,11 @@ fn get_datetime(exif: &Exif) -> Option<DateTime> {
     None
 }
 
-fn nodt(path: &PathBuf) -> String {
-    format!("{}: datetime requested, but not available", path.display())
-}
-
-fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
+fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars();
     let mut in_fmt = false;
     let dt = get_datetime(exif);
+    let nodt = "datetime requested, but not available";
 
     // Currently cannot go over this, since widest DT field (year) is 2x input
     let mut out = String::with_capacity(fmt.len() * 2);
@@ -85,12 +85,12 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
             '%' => out.push('%'),
 
             // DateTime
-            'Y' => write!(&mut out, "{:04}", dt.as_ref().with_context(|| nodt(path))?.year)?,
-            'm' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.month)?,
-            'd' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.day)?,
-            'H' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.hour)?,
-            'M' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.minute)?,
-            'S' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.second)?,
+            'Y' => write!(&mut out, "{:04}", dt.as_ref().context(nodt)?.year)?,
+            'm' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.month)?,
+            'd' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.day)?,
+            'H' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.hour)?,
+            'M' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.minute)?,
+            'S' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.second)?,
 
             // Direct maps to tags
             _ => {
@@ -100,7 +100,7 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
                     'i' => Tag::PhotographicSensitivity, // TODO: check SensitivityType/0x8830?
                     's' => Tag::ExposureTime, // non-APEX, which has a useful display value
 
-                    _ => bail!("unknown format %{}", cur),
+                    _ => panic!("unknown format %{}", cur),
                 };
 
                 let field = exif
@@ -138,7 +138,7 @@ fn get_new_name(path: &PathBuf, fmt: &str) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
 
-    let mut name = render_format(&path, &exif, fmt)?;
+    let mut name = render_format(&exif, fmt)?;
     if let Some(ext) = path.extension() {
         write!(&mut name, ".{}", ext.to_str().context("non-utf8 extension")?)?;
     }
@@ -148,10 +148,16 @@ fn get_new_name(path: &PathBuf, fmt: &str) -> Result<String> {
 fn main() -> Result<()> {
     let args = Args::parse();
     for file in args.files {
-        let new_name = get_new_name(&file, &args.fmt)?;
-        println!("{} -> {}", file.display(), get_new_name(&file, &args.fmt)?);
-        if !args.dry_run {
-            rename_creating_dirs(&file, new_name)?;
+        match get_new_name(&file, &args.fmt) {
+            Ok(new_name) => {
+                println!("{} -> {}", file.display(), get_new_name(&file, &args.fmt)?);
+                if !args.dry_run {
+                    rename_creating_dirs(&file, new_name)?;
+                }
+            }
+
+            // Fatal conditions like invalid formats go through panic!(), not here
+            Err(err) => eprintln!("{}: {}", file.display(), err),
         }
     }
     Ok(())
