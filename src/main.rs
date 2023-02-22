@@ -66,8 +66,8 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
     let dt = get_datetime(exif);
     let nodt = "datetime requested, but not available";
 
-    // Currently cannot go over this, since widest DT field (year) is 2x input
-    let mut out = String::with_capacity(fmt.len() * 2);
+    // Ballpark guess large enough to usually avoid extra allocations
+    let mut out = String::with_capacity(fmt.len() * 3);
 
     while let Some(cur) = chars.next() {
         if !in_fmt {
