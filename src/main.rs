@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
@@ -69,9 +69,22 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
             'M' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.minute)?,
             'S' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.second)?,
 
+            // Direct maps to tags
             _ => {
-                eprintln!("ignored unknown format %{}", cur);
-                write!(&mut out, "%{}", cur)?
+                let tag = match cur {
+                    // Exposure attributes
+                    'f' => Tag::FNumber,
+                    'i' => Tag::PhotographicSensitivity, // TODO: check SensitivityType/0x8830?
+                    's' => Tag::ExposureTime, // non-APEX, which has a useful display value
+
+                    _ => bail!("unknown format %{}", cur),
+                };
+
+                let field = exif
+                    .get_field(tag, In::PRIMARY)
+                    .with_context(|| format!("no data for %{}", cur))?;
+
+                write!(&mut out, "{}", field.display_value())?;
             }
         };
     }
