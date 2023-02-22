@@ -1,11 +1,15 @@
+use std::ffi::CString;
 use std::fmt::Write;
 use std::fs;
+use std::io;
 use std::io::BufReader;
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use tempfile::NamedTempFile;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
 
@@ -129,16 +133,41 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
     Ok(out)
 }
 
+fn rename_noclobber(from: &Path, to: &Path) -> io::Result<()> {
+    let from_c = CString::new(from.as_os_str().as_bytes()).expect("invalid rename source");
+    let to_c = CString::new(to.as_os_str().as_bytes()).expect("invalid rename dest");
+
+    let ret = unsafe {
+        libc::syscall(
+            libc::SYS_renameat2,
+            libc::AT_FDCWD,
+            from_c.as_ptr(),
+            libc::AT_FDCWD,
+            to_c.as_ptr(),
+            libc::RENAME_NOREPLACE,
+        )
+    };
+
+    if ret == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
 fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>) -> Result<()> {
     let to = to_raw.into();
-    fs::create_dir_all(&to.parent().context("refusing to move to filesystem root")?)?;
+    let to_parent = to.parent().context("refusing to move to filesystem root")?;
+    fs::create_dir_all(to_parent)?;
 
     // Trying to rename cross device? Just copy and unlink the old one
-    let ren = fs::rename(&from, &to);
+    let ren = rename_noclobber(&from, &to);
     if let Err(ref err) = ren {
         if let Some(os_err) = err.raw_os_error() {
             if os_err == libc::EXDEV {
-                fs::copy(&from, &to)?;
+                let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
+                fs::copy(&from, &tmp_path)?;
+                rename_noclobber(&tmp_path, &to)?;
                 fs::remove_file(&from)?;
             } else {
                 ren?;
