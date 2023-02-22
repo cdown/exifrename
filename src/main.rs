@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::fs::File;
+use std::fs;
 use std::io::BufReader;
 use std::path::PathBuf;
 
@@ -13,6 +13,9 @@ use exif::{DateTime, Exif, In, Reader, Tag, Value};
 struct Args {
     #[arg(short, long)]
     fmt: String,
+
+    #[arg(long)]
+    dry_run: bool,
 
     files: Vec<PathBuf>,
 }
@@ -82,7 +85,7 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
                     .get_field(tag, In::PRIMARY)
                     .with_context(|| format!("no data for %{}", cur))?;
 
-                write!(&mut out, "{}", field.display_value())?;
+                write!(&mut out, "{}", field.display_value().to_string().replace("/", "_"))?;
             }
         };
     }
@@ -90,18 +93,44 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
     Ok(out)
 }
 
+fn rename_creating_dirs(from: &PathBuf, to_raw: impl Into<PathBuf>) -> Result<()> {
+    let to = to_raw.into();
+    fs::create_dir_all(&to.parent().context("refusing to move to filesystem root")?)?;
+
+    // Trying to rename cross device? Just copy and unlink the old one
+    let ren = fs::rename(&from, &to);
+    if let Err(ref err) = ren {
+        if let Some(os_err) = err.raw_os_error() {
+            if os_err == libc::EXDEV {
+                fs::copy(&from, &to)?;
+                fs::remove_file(&from)?;
+            } else {
+                ren?;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn get_new_name(path: &PathBuf, fmt: &str) -> Result<String> {
-    let file = File::open(path)?;
+    let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
 
-    render_format(&path, &exif, fmt)
+    let mut name = render_format(&path, &exif, fmt)?;
+    if let Some(ext) = path.extension() {
+        write!(&mut name, ".{}", ext.to_str().context("non-utf8 extension")?)?;
+    }
+    Ok(name)
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
     for file in args.files {
-        println!("{}", get_new_name(&file, &args.fmt)?);
+        let new_name = get_new_name(&file, &args.fmt)?;
+        println!("{} -> {}", file.display(), get_new_name(&file, &args.fmt)?);
+        if !args.dry_run {
+            rename_creating_dirs(&file, new_name)?;
+        }
     }
-
     Ok(())
 }
