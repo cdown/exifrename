@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::fs;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use anyhow::{Context, Result};
@@ -129,7 +129,7 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
     Ok(out)
 }
 
-fn rename_creating_dirs(from: &PathBuf, to_raw: impl Into<PathBuf>) -> Result<()> {
+fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>) -> Result<()> {
     let to = to_raw.into();
     fs::create_dir_all(&to.parent().context("refusing to move to filesystem root")?)?;
 
@@ -148,7 +148,7 @@ fn rename_creating_dirs(from: &PathBuf, to_raw: impl Into<PathBuf>) -> Result<()
     Ok(())
 }
 
-fn get_new_name(path: &PathBuf, fmt: &str) -> Result<String> {
+fn get_new_name(path: &Path, fmt: &str) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
 
