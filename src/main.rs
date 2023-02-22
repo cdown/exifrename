@@ -11,10 +11,32 @@ use exif::{DateTime, Exif, In, Reader, Tag, Value};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
+    /// The format to apply to files, excluding the extension.
+    ///
+    /// Available formats:
+    ///
+    /// DATETIME:
+    ///
+    /// %Y  year    (width: 4)
+    /// %m  month   (width: 2)
+    /// %d  day     (width: 2)
+    /// %H  hour    (width: 2)
+    /// %M  minute  (width: 2)
+    /// %S  second  (width: 2)
+    ///
+    /// EXPOSURE:
+    ///
+    /// %f  f-stop
+    /// %i  ISO
+    /// %s  shutter speed/exposure time, with "/" replaced with "_"
+    ///
+    /// LITERAL:
+    ///
+    /// %%  A literal "%"
+    #[arg(short, long, verbatim_doc_comment)]
     fmt: String,
 
-    #[arg(long)]
+    #[arg(long, help = "Don't actually rename files, only display what would happen")]
     dry_run: bool,
 
     files: Vec<PathBuf>,
