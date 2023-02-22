@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
@@ -17,36 +17,29 @@ struct Args {
     files: Vec<PathBuf>,
 }
 
-fn get_datetime(path: &PathBuf, exif: &Exif) -> DateTime {
+fn get_datetime(exif: &Exif) -> Option<DateTime> {
     if let Some(field) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
         match field.value {
             Value::Ascii(ref vec) if !vec.is_empty() => {
                 if let Ok(datetime) = DateTime::from_ascii(&vec[0]) {
-                    return datetime;
+                    return Some(datetime);
                 }
             }
             _ => {}
         }
     }
 
-    eprintln!("{}: missing datetime information", path.display());
+    None
+}
 
-    DateTime {
-        year: 0,
-        month: 0,
-        day: 0,
-        hour: 0,
-        minute: 0,
-        second: 0,
-        nanosecond: None,
-        offset: None,
-    }
+fn nodt(path: &PathBuf) -> String {
+    format!("{}: datetime requested, but not available", path.display())
 }
 
 fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars();
     let mut in_fmt = false;
-    let dt = get_datetime(path, exif);
+    let dt = get_datetime(exif);
 
     // Currently cannot go over this, since widest DT field (year) is 2x input
     let mut out = String::with_capacity(fmt.len() * 2);
@@ -63,14 +56,19 @@ fn render_format(path: &PathBuf, exif: &Exif, fmt: &str) -> Result<String> {
 
         in_fmt = false;
 
+        // rustfmt makes this significantly more difficult to read
+        #[rustfmt::skip]
         match cur {
             '%' => out.push('%'),
-            'Y' => write!(&mut out, "{:04}", dt.year)?,
-            'm' => write!(&mut out, "{:02}", dt.month)?,
-            'd' => write!(&mut out, "{:02}", dt.day)?,
-            'H' => write!(&mut out, "{:02}", dt.hour)?,
-            'M' => write!(&mut out, "{:02}", dt.minute)?,
-            'S' => write!(&mut out, "{:02}", dt.second)?,
+
+            // DateTime
+            'Y' => write!(&mut out, "{:04}", dt.as_ref().with_context(|| nodt(path))?.year)?,
+            'm' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.month)?,
+            'd' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.day)?,
+            'H' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.hour)?,
+            'M' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.minute)?,
+            'S' => write!(&mut out, "{:02}", dt.as_ref().with_context(|| nodt(path))?.second)?,
+
             _ => {
                 eprintln!("ignored unknown format %{}", cur);
                 write!(&mut out, "%{}", cur)?
