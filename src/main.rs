@@ -13,32 +13,50 @@ use tempfile::NamedTempFile;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
 
+type FormatterCallback = fn(&Exif) -> Option<String>;
+type DatetimeCallback = fn(&DateTime) -> String;
+
+// This is super small, no need for a hashmap or similar
+static FORMATTERS: &[(&str, FormatterCallback)] = &[
+    ("fstop", |e| get_field(e, Tag::FNumber)),
+    ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
+    ("sspeed", |e| get_field(e, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    ("year", |e| get_datetime_field(e, |d| format!("{}", d.year))),
+    ("year2", |e| get_datetime_field(e, |d| format!("{}", d.year % 100))),
+    ("month", |e| get_datetime_field(e, |d| format!("{:02}", d.month))),
+    ("day", |e| get_datetime_field(e, |d| format!("{:02}", d.day))),
+    ("hour", |e| get_datetime_field(e, |d| format!("{:02}", d.hour))),
+    ("minute", |e| get_datetime_field(e, |d| format!("{:02}", d.minute))),
+    ("second", |e| get_datetime_field(e, |d| format!("{:02}", d.second))),
+];
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// The format to apply to files, excluding the extension.
+    /// The format to apply to files, excluding the extension. Substitutions can be applied inside
+    /// curly brackets, for example with {year2} to get the two digit year.
     ///
     /// Available formats:
     ///
     /// DATETIME:
     ///
-    /// %Y  year    (width: 4)
-    /// %y  year    (width: 2)
-    /// %m  month   (width: 2)
-    /// %d  day     (width: 2)
-    /// %H  hour    (width: 2)
-    /// %M  minute  (width: 2)
-    /// %S  second  (width: 2)
+    ///   year    (width: 4)
+    ///   year2   (width: 2)
+    ///   month   (width: 2)
+    ///   day     (width: 2)
+    ///   hour    (width: 2)
+    ///   minute  (width: 2)
+    ///   second  (width: 2)
     ///
     /// EXPOSURE:
     ///
-    /// %f  f-stop
-    /// %i  ISO
-    /// %s  shutter speed/exposure time, with "/" replaced with "_"
+    ///   fstop
+    ///   iso
+    ///   sspeed  (shutter speed/exposure time, with "/" replaced with "_")
     ///
     /// LITERAL:
     ///
-    /// %%  A literal "%"
+    ///   {{ and }} indicate literal brackets.
     #[arg(short, long, verbatim_doc_comment)]
     fmt: String,
 
@@ -58,6 +76,20 @@ macro_rules! die {
     }}
 }
 
+fn get_field(exif: &Exif, tag: Tag) -> Option<String> {
+    Some(
+        exif.get_field(tag, In::PRIMARY)?
+            .display_value()
+            .to_string()
+            .replace('/', "_"),
+    )
+}
+
+fn get_datetime_field(exif: &Exif, cb: DatetimeCallback) -> Option<String> {
+    Some(cb(get_datetime(exif).as_ref()?))
+}
+
+// TODO: caching?
 fn get_datetime(exif: &Exif) -> Option<DateTime> {
     if let Some(field) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
         match field.value {
@@ -74,60 +106,60 @@ fn get_datetime(exif: &Exif) -> Option<DateTime> {
 }
 
 fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
-    let mut chars = fmt.chars();
+    let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
-    let dt = get_datetime(exif);
-    let nodt = "datetime requested, but not available";
 
-    // Ballpark guess large enough to usually avoid extra allocations
+    // Ballpark guesses large enough to usually avoid extra allocations
     let mut out = String::with_capacity(fmt.len() * 3);
+    let mut word = String::with_capacity(16);
 
     while let Some(cur) = chars.next() {
+        if cur == '}' {
+            match chars.next_if_eq(&'}') {
+                Some(_) => out.push(cur),
+                None => {
+                    if in_fmt {
+                        let rep = match FORMATTERS
+                            .iter()
+                            .find(|&&(s, _)| s == word)
+                            .map(|&(_, f)| f)
+                        {
+                            Some(cb) => cb(exif)
+                                .with_context(|| format!("missing data for field '{}'", word))?,
+                            None => die!("invalid field: '{{{}}}'", word),
+                        };
+                        word.clear();
+                        write!(&mut out, "{}", rep)?;
+                        in_fmt = false;
+                        continue;
+                    } else {
+                        die!("mismatched '}}' in format");
+                    }
+                }
+            }
+        }
+
         if !in_fmt {
-            if cur == '%' {
+            if cur == '{' {
                 in_fmt = true;
             } else {
                 out.push(cur);
             }
+
             continue;
         }
 
-        in_fmt = false;
-
-        match cur {
-            '%' => out.push('%'),
-
-            // DateTime
-            'Y' => write!(&mut out, "{:04}", dt.as_ref().context(nodt)?.year)?,
-            'y' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.year % 100)?,
-            'm' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.month)?,
-            'd' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.day)?,
-            'H' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.hour)?,
-            'M' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.minute)?,
-            'S' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.second)?,
-
-            // Direct maps to tags
-            _ => {
-                let tag = match cur {
-                    // Exposure attributes
-                    'f' => Tag::FNumber,
-                    'i' => Tag::PhotographicSensitivity, // TODO: check SensitivityType/0x8830?
-                    's' => Tag::ExposureTime, // non-APEX, which has a useful display value
-
-                    _ => die!("unknown format %{}", cur),
-                };
-
-                let field = exif
-                    .get_field(tag, In::PRIMARY)
-                    .with_context(|| format!("no data for %{}", cur))?;
-
-                write!(&mut out, "{}", field.display_value().to_string().replace("/", "_"))?;
+        if cur == '{' {
+            if word.is_empty() {
+                out.push(cur);
+                in_fmt = false;
+                continue;
+            } else {
+                die!("nested '{{' in format");
             }
-        };
-    }
+        }
 
-    if in_fmt {
-        die!("unfinished percent string at end of format");
+        word.push(cur);
     }
 
     Ok(out)
@@ -161,14 +193,14 @@ fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>) -> Result<()> {
     fs::create_dir_all(to_parent)?;
 
     // Trying to rename cross device? Just copy and unlink the old one
-    let ren = rename_noclobber(&from, &to);
+    let ren = rename_noclobber(from, &to);
     if let Err(ref err) = ren {
         if let Some(os_err) = err.raw_os_error() {
             if os_err == libc::EXDEV {
                 let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
-                fs::copy(&from, &tmp_path)?;
+                fs::copy(from, &tmp_path)?;
                 rename_noclobber(&tmp_path, &to)?;
-                fs::remove_file(&from)?;
+                fs::remove_file(from)?;
             } else {
                 ren?;
             }
