@@ -13,6 +13,15 @@ use tempfile::NamedTempFile;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
 
+type FormatterCallback = fn(&Exif) -> Option<String>;
+
+// This is super small, no need for a hashmap or similar
+static FORMATTERS: &'static [(&'static str, FormatterCallback)] = &[
+    ("fstop", |e| get_field(e, Tag::FNumber)),
+    ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
+    ("sspeed", |e| get_field(e, Tag::ExposureTime)), // non-APEX, which has a useful display value
+];
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -58,6 +67,13 @@ macro_rules! die {
     }}
 }
 
+fn get_field(exif: &Exif, tag: Tag) -> Option<String> {
+    match exif.get_field(tag, In::PRIMARY) {
+        Some(field) => Some(field.display_value().to_string().replace("/", "_")),
+        None => None,
+    }
+}
+
 fn get_datetime(exif: &Exif) -> Option<DateTime> {
     if let Some(field) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
         match field.value {
@@ -74,60 +90,62 @@ fn get_datetime(exif: &Exif) -> Option<DateTime> {
 }
 
 fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
-    let mut chars = fmt.chars();
+    let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
     let dt = get_datetime(exif);
     let nodt = "datetime requested, but not available";
 
-    // Ballpark guess large enough to usually avoid extra allocations
+    // Ballpark guesses large enough to usually avoid extra allocations
     let mut out = String::with_capacity(fmt.len() * 3);
+    let mut word = String::with_capacity(16);
 
     while let Some(cur) = chars.next() {
+        if cur == '}' {
+            match chars.next_if_eq(&'}') {
+                Some(_) => out.push(cur),
+                None => {
+                    if in_fmt {
+                        let rep = match FORMATTERS
+                            .into_iter()
+                            .find(|&&(s, _)| s == word)
+                            .map(|&(_, f)| f)
+                        {
+                            Some(cb) => cb(exif)
+                                .with_context(|| format!("missing data for field '{}'", word))?,
+                            None => die!("invalid field: '{{{}}}'", word),
+                        };
+                        word.clear();
+                        write!(&mut out, "{}", rep);
+                        in_fmt = false;
+                        continue;
+                    } else {
+                        die!("mismatched '}}' in format");
+                    }
+                }
+            }
+        }
+
         if !in_fmt {
-            if cur == '%' {
+            if cur == '{' {
                 in_fmt = true;
             } else {
                 out.push(cur);
             }
+
             continue;
         }
 
-        in_fmt = false;
-
-        match cur {
-            '%' => out.push('%'),
-
-            // DateTime
-            'Y' => write!(&mut out, "{:04}", dt.as_ref().context(nodt)?.year)?,
-            'y' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.year % 100)?,
-            'm' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.month)?,
-            'd' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.day)?,
-            'H' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.hour)?,
-            'M' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.minute)?,
-            'S' => write!(&mut out, "{:02}", dt.as_ref().context(nodt)?.second)?,
-
-            // Direct maps to tags
-            _ => {
-                let tag = match cur {
-                    // Exposure attributes
-                    'f' => Tag::FNumber,
-                    'i' => Tag::PhotographicSensitivity, // TODO: check SensitivityType/0x8830?
-                    's' => Tag::ExposureTime, // non-APEX, which has a useful display value
-
-                    _ => die!("unknown format %{}", cur),
-                };
-
-                let field = exif
-                    .get_field(tag, In::PRIMARY)
-                    .with_context(|| format!("no data for %{}", cur))?;
-
-                write!(&mut out, "{}", field.display_value().to_string().replace("/", "_"))?;
+        if cur == '{' {
+            if word.is_empty() {
+                out.push(cur);
+                in_fmt = false;
+                continue;
+            } else {
+                die!("nested '{{' in format");
             }
-        };
-    }
+        }
 
-    if in_fmt {
-        die!("unfinished percent string at end of format");
+        word.push(cur);
     }
 
     Ok(out)
