@@ -9,6 +9,7 @@ use std::process;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use phf::phf_map;
 use tempfile::NamedTempFile;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
@@ -17,18 +18,18 @@ type FormatterCallback = fn(&Exif) -> Option<String>;
 type DatetimeCallback = fn(&DateTime) -> String;
 
 // This is super small, no need for a hashmap or similar
-static FORMATTERS: &[(&str, FormatterCallback)] = &[
-    ("fstop", |e| get_field(e, Tag::FNumber)),
-    ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-    ("sspeed", |e| get_field(e, Tag::ExposureTime)), // non-APEX, which has a useful display value
-    ("year", |e| get_datetime_field(e, |d| format!("{}", d.year))),
-    ("year2", |e| get_datetime_field(e, |d| format!("{}", d.year % 100))),
-    ("month", |e| get_datetime_field(e, |d| format!("{:02}", d.month))),
-    ("day", |e| get_datetime_field(e, |d| format!("{:02}", d.day))),
-    ("hour", |e| get_datetime_field(e, |d| format!("{:02}", d.hour))),
-    ("minute", |e| get_datetime_field(e, |d| format!("{:02}", d.minute))),
-    ("second", |e| get_datetime_field(e, |d| format!("{:02}", d.second))),
-];
+static FORMATTERS: phf::Map<&'static str, FormatterCallback> = phf_map! {
+    "fstop" => |e| get_field(e, Tag::FNumber),
+    "iso" => |e| get_field(e, Tag::PhotographicSensitivity), // TODO: check SensitivityType/0x8830?
+    "sspeed" => |e| get_field(e, Tag::ExposureTime), // non-APEX, which has a useful display value
+    "year" => |e| get_datetime_field(e, |d| format!("{}", d.year)),
+    "year2" => |e| get_datetime_field(e, |d| format!("{}", d.year % 100)),
+    "month" => |e| get_datetime_field(e, |d| format!("{:02}", d.month)),
+    "day" => |e| get_datetime_field(e, |d| format!("{:02}", d.day)),
+    "hour" => |e| get_datetime_field(e, |d| format!("{:02}", d.hour)),
+    "minute" => |e| get_datetime_field(e, |d| format!("{:02}", d.minute)),
+    "second" => |e| get_datetime_field(e, |d| format!("{:02}", d.second)),
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -119,11 +120,7 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
                 Some(_) => out.push(cur),
                 None => {
                     if in_fmt {
-                        let rep = match FORMATTERS
-                            .iter()
-                            .find(|&&(s, _)| s == word)
-                            .map(|&(_, f)| f)
-                        {
+                        let rep = match FORMATTERS.get(&word) {
                             Some(cb) => cb(exif)
                                 .with_context(|| format!("missing data for field '{}'", word))?,
                             None => die!("invalid field: '{{{}}}'", word),
