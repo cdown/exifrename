@@ -16,7 +16,7 @@ use exif::{DateTime, Exif, In, Reader, Tag, Value};
 type FormatterCallback = fn(&Exif) -> Option<String>;
 type DatetimeCallback = fn(&DateTime) -> String;
 
-// This is super small, no need for a hashmap or similar
+// This is super small: even with thousands of lookups using a phf::Map is slower
 static FORMATTERS: &[(&str, FormatterCallback)] = &[
     ("fstop", |e| get_field(e, Tag::FNumber)),
     ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
