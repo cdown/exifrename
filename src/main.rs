@@ -66,6 +66,9 @@ struct Args {
     )]
     dry_run: bool,
 
+    #[arg(long, help = "Allow overwriting existing files with the same name")]
+    overwrite: bool,
+
     files: Vec<PathBuf>,
 }
 
@@ -165,9 +168,10 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
     Ok(out)
 }
 
-fn rename_noclobber(from: &Path, to: &Path) -> io::Result<()> {
+fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     let from_c = CString::new(from.as_os_str().as_bytes()).expect("invalid rename source");
     let to_c = CString::new(to.as_os_str().as_bytes()).expect("invalid rename dest");
+    let flags = if overwrite { 0 } else { libc::RENAME_NOREPLACE };
 
     let ret = unsafe {
         libc::syscall(
@@ -176,7 +180,7 @@ fn rename_noclobber(from: &Path, to: &Path) -> io::Result<()> {
             from_c.as_ptr(),
             libc::AT_FDCWD,
             to_c.as_ptr(),
-            libc::RENAME_NOREPLACE,
+            flags,
         )
     };
 
@@ -187,19 +191,19 @@ fn rename_noclobber(from: &Path, to: &Path) -> io::Result<()> {
     }
 }
 
-fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>) -> Result<()> {
+fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool) -> Result<()> {
     let to = to_raw.into();
     let to_parent = to.parent().context("refusing to move to filesystem root")?;
     fs::create_dir_all(to_parent)?;
 
     // Trying to rename cross device? Just copy and unlink the old one
-    let ren = rename_noclobber(from, &to);
+    let ren = rename(from, &to, overwrite);
     if let Err(ref err) = ren {
         if let Some(os_err) = err.raw_os_error() {
             if os_err == libc::EXDEV {
                 let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
                 fs::copy(from, &tmp_path)?;
-                rename_noclobber(&tmp_path, &to)?;
+                rename(&tmp_path, &to, overwrite)?;
                 fs::remove_file(from)?;
             } else {
                 ren?;
@@ -229,7 +233,7 @@ fn main() -> Result<()> {
             Ok(new_name) => {
                 println!("{} -> {}", file.display(), get_new_name(&file, &args.fmt)?);
                 if !args.dry_run {
-                    rename_creating_dirs(&file, new_name)?;
+                    rename_creating_dirs(&file, new_name, args.overwrite)?;
                 }
             }
 
