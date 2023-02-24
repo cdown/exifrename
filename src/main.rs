@@ -204,6 +204,8 @@ fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>) -> Result<()> {
             } else {
                 ren?;
             }
+        } else {
+            ren?;
         }
     }
     Ok(())
