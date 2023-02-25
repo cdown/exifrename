@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::fmt::Write;
 use std::fs;
@@ -244,23 +245,30 @@ fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool
     Ok(())
 }
 
-fn get_new_name(path: &Path, fmt: &str) -> Result<String> {
+fn get_new_name(path: &Path, fmt: &str, counter: &mut HashMap<String, u16>) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
-
     let mut name = render_format(&exif, fmt)?;
+
+    *counter.entry(name.clone()).or_default() += 1;
+    let cnt = counter[&name];
+    write!(&mut name, "_{}", cnt)?;
+
     if let Some(ext) = path.extension() {
         write!(&mut name, ".{}", ext.to_str().context("non-utf8 extension")?)?;
     }
+
     Ok(name)
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
+    let mut counter: HashMap<String, u16> = HashMap::new();
+
     for file in args.files {
-        match get_new_name(&file, &args.fmt) {
+        match get_new_name(&file, &args.fmt, &mut counter) {
             Ok(new_name) => {
-                println!("{} -> {}", file.display(), get_new_name(&file, &args.fmt)?);
+                println!("{} -> {}", file.display(), new_name);
                 if !args.dry_run {
                     rename_creating_dirs(&file, new_name, args.overwrite)?;
                 }
