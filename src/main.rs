@@ -226,8 +226,14 @@ fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool
             if os_err == libc::EXDEV {
                 let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
                 fs::copy(from, &tmp_path)?;
-                rename(&tmp_path, &to, overwrite)?;
-                fs::remove_file(from)?;
+                let res = rename(&tmp_path, &to, overwrite);
+                match res {
+                    Ok(_) => fs::remove_file(from)?,
+                    Err(_) => {
+                        fs::remove_file(tmp_path)?;
+                        res?;
+                    }
+                }
             } else {
                 ren?;
             }
