@@ -6,6 +6,7 @@ use std::io::BufReader;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::str;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -16,11 +17,10 @@ use exif::{DateTime, Exif, In, Reader, Tag, Value};
 type FormatterCallback = fn(&Exif) -> Option<String>;
 type DatetimeCallback = fn(&DateTime) -> String;
 
-// This is super small: even with thousands of lookups using a phf::Map is slower
+// This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
+// more commonly requested fields higher.
 static FORMATTERS: &[(&str, FormatterCallback)] = &[
-    ("fstop", |e| get_field(e, Tag::FNumber)),
-    ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-    ("sspeed", |e| get_field(e, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    // Date/time attributes
     ("year", |e| get_datetime_field(e, |d| format!("{}", d.year))),
     ("year2", |e| get_datetime_field(e, |d| format!("{}", d.year % 100))),
     ("month", |e| get_datetime_field(e, |d| format!("{:02}", d.month))),
@@ -28,6 +28,20 @@ static FORMATTERS: &[(&str, FormatterCallback)] = &[
     ("hour", |e| get_datetime_field(e, |d| format!("{:02}", d.hour))),
     ("minute", |e| get_datetime_field(e, |d| format!("{:02}", d.minute))),
     ("second", |e| get_datetime_field(e, |d| format!("{:02}", d.second))),
+    // Exposure attributes
+    ("fstop", |e| get_field(e, Tag::FNumber)),
+    ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
+    ("shutter_speed", |e| get_field(e, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    // Camera attributes
+    ("camera_make", |e| get_field(e, Tag::Make)),
+    ("camera_model", |e| get_field(e, Tag::Model)),
+    ("camera_serial", |e| get_field(e, Tag::BodySerialNumber)),
+    // Lens attributes
+    ("lens_make", |e| get_field(e, Tag::LensMake)),
+    ("lens_model", |e| get_field(e, Tag::LensModel)),
+    ("lens_serial", |e| get_field(e, Tag::LensSerialNumber)),
+    ("focal_length", |e| get_field(e, Tag::FocalLength)),
+    ("focal_length_35", |e| get_field(e, Tag::FocalLengthIn35mmFilm)),
 ];
 
 #[derive(Parser, Debug)]
@@ -80,12 +94,21 @@ macro_rules! die {
 }
 
 fn get_field(exif: &Exif, tag: Tag) -> Option<String> {
-    Some(
-        exif.get_field(tag, In::PRIMARY)?
-            .display_value()
-            .to_string()
-            .replace('/', "_"),
-    )
+    let mut out = None;
+
+    if let Some(field) = exif.get_field(tag, In::PRIMARY) {
+        match field.value {
+            // Default formatter puts ASCII values inside quotes, which we don't want
+            Value::Ascii(ref vec) if !vec.is_empty() => {
+                if let Ok(val) = str::from_utf8(&vec[0]) {
+                    out = Some(val.to_string());
+                }
+            }
+            _ => out = Some(field.display_value().to_string()),
+        }
+    }
+
+    out.map(|s| s.replace('/', "_"))
 }
 
 fn get_datetime_field(exif: &Exif, cb: DatetimeCallback) -> Option<String> {
