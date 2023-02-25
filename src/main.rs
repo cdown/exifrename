@@ -49,7 +49,8 @@ static FORMATTERS: &[(&str, FormatterCallback)] = &[
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// The format to apply to files, excluding the extension. Substitutions can be applied inside
-    /// curly brackets, for example with {year2} to get the two digit year.
+    /// curly brackets, for example with {year2} to get the two digit year. Any formats returning
+    /// data with "/" will have it transformed to "_".
     ///
     /// Available formats:
     ///
@@ -67,7 +68,22 @@ struct Args {
     ///
     ///   fstop
     ///   iso
-    ///   sspeed  (shutter speed/exposure time, with "/" replaced with "_")
+    ///   shutter_speed
+    ///
+    ///
+    /// CAMERA:
+    ///
+    ///   camera_make
+    ///   camera_model
+    ///   camera_serial
+    ///
+    /// LENS:
+    ///
+    ///   lens_make
+    ///   lens_model
+    ///   lens_serial
+    ///   focal_length
+    ///   focal_length_35  (Focal length in 35mm equivalent)
     ///
     /// LITERAL:
     ///
