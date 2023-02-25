@@ -75,6 +75,9 @@ struct Args {
     #[arg(short, long, verbatim_doc_comment)]
     fmt: String,
 
+    #[arg(short, long, help = "Append a counter of this width to each format")]
+    counter: Option<usize>,
+
     #[arg(
         long,
         help = "Don't actually rename files, only display what would happen"
@@ -245,14 +248,21 @@ fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool
     Ok(())
 }
 
-fn get_new_name(path: &Path, fmt: &str, counter: &mut HashMap<String, u16>) -> Result<String> {
+fn get_new_name(
+    path: &Path,
+    fmt: &str,
+    counter: &mut HashMap<String, u16>,
+    width: Option<usize>,
+) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
     let mut name = render_format(&exif, fmt)?;
 
-    *counter.entry(name.clone()).or_default() += 1;
-    let cnt = counter[&name];
-    write!(&mut name, "_{}", cnt)?;
+    if let Some(pad) = width {
+        *counter.entry(name.clone()).or_default() += 1;
+        let cnt = counter[&name];
+        write!(&mut name, "_{:0width$}", cnt, width = pad)?;
+    }
 
     if let Some(ext) = path.extension() {
         write!(&mut name, ".{}", ext.to_str().context("non-utf8 extension")?)?;
@@ -266,7 +276,7 @@ fn main() -> Result<()> {
     let mut counter: HashMap<String, u16> = HashMap::new();
 
     for file in args.files {
-        match get_new_name(&file, &args.fmt, &mut counter) {
+        match get_new_name(&file, &args.fmt, &mut counter, args.counter) {
             Ok(new_name) => {
                 println!("{} -> {}", file.display(), new_name);
                 if !args.dry_run {
