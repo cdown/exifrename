@@ -87,6 +87,9 @@ struct Args {
     #[arg(long, help = "Allow overwriting existing files with the same name")]
     overwrite: bool,
 
+    #[arg(short = 'o', long, help = "Copy instead of renaming")]
+    copy: bool,
+
     files: Vec<PathBuf>,
 }
 
@@ -218,6 +221,20 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     }
 }
 
+fn copy_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool) -> Result<()> {
+    let to = to_raw.into();
+    let to_parent = to.parent().context("refusing to move to filesystem root")?;
+    fs::create_dir_all(to_parent)?;
+    let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
+    fs::copy(from, &tmp_path)?;
+    let res = rename(&tmp_path, &to, overwrite);
+    if res.is_err() {
+        fs::remove_file(tmp_path)?;
+        res?;
+    }
+    Ok(())
+}
+
 fn rename_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool) -> Result<()> {
     let to = to_raw.into();
     let to_parent = to.parent().context("refusing to move to filesystem root")?;
@@ -280,7 +297,11 @@ fn main() -> Result<()> {
             Ok(new_name) => {
                 println!("{} -> {}", file.display(), new_name);
                 if !args.dry_run {
-                    rename_creating_dirs(&file, new_name, args.overwrite)?;
+                    if args.copy {
+                        copy_creating_dirs(&file, new_name, args.overwrite)?;
+                    } else {
+                        rename_creating_dirs(&file, new_name, args.overwrite)?;
+                    }
                 }
             }
 
