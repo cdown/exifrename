@@ -139,7 +139,7 @@ fn get_field(im: &ImageMetadata, tag: Tag) -> Option<String> {
 }
 
 fn get_datetime_field(im: &ImageMetadata, cb: DatetimeCallback) -> Option<String> {
-    im.datetime.as_ref().map(|dt| cb(dt))
+    im.datetime.as_ref().map(cb)
 }
 
 fn get_datetime(exif: &Exif) -> Option<DateTime> {
@@ -293,10 +293,7 @@ fn get_new_name(
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let dt = get_datetime(&exif);
-    let im = ImageMetadata {
-        exif: exif,
-        datetime: dt,
-    };
+    let im = ImageMetadata { exif, datetime: dt };
     let mut name = render_format(&im, fmt)?;
 
     if let Some(pad) = width {
