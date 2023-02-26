@@ -67,9 +67,8 @@ pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
                         write!(&mut out, "{rep}")?;
                         in_fmt = false;
                         continue;
-                    } else {
-                        util::die!("mismatched '}}' in format");
                     }
+                    util::die!("mismatched '}}' in format");
                 }
             }
         }
@@ -89,9 +88,8 @@ pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
                 out.push(cur);
                 in_fmt = false;
                 continue;
-            } else {
-                util::die!("nested '{{' in format");
             }
+            util::die!("nested '{{' in format");
         }
 
         word.push(cur);
