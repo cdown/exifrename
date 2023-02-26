@@ -69,16 +69,8 @@ pub fn rename_creating_dirs(
 
     if let Err(ref err) = ren_samedev {
         if err.raw_os_error() == Some(libc::EXDEV) {
-            let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
-            fs::copy(from, &tmp_path)?;
-            let ren_xdev = rename(&tmp_path, &to, overwrite);
-            match ren_xdev {
-                Ok(_) => fs::remove_file(from)?,
-                Err(_) => {
-                    fs::remove_file(tmp_path)?;
-                    ren_xdev?;
-                }
-            }
+            copy_creating_dirs(from, &to, overwrite)?;
+            fs::remove_file(from)?;
         } else {
             ren_samedev?;
         }
