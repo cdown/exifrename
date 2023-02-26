@@ -7,7 +7,7 @@ use std::str;
 use anyhow::{Context, Result};
 use hashbrown::HashMap;
 
-use crate::metadata::{get_datetime, get_datetime_field, get_exif_field};
+use crate::metadata::{get_datetime, get_datetime_field, get_exif_field, get_original_filename};
 use crate::{types, util};
 use exif::{Reader, Tag};
 
@@ -36,6 +36,8 @@ static FORMATTERS: &[(&str, types::FormatterCallback)] = &[
     ("lens_serial", |im| get_exif_field(im, Tag::LensSerialNumber)),
     ("focal_length", |im| get_exif_field(im, Tag::FocalLength)),
     ("focal_length_35", |im| get_exif_field(im, Tag::FocalLengthIn35mmFilm)),
+    // Filesystem attributes
+    ("filename", get_original_filename),
 ];
 
 pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
@@ -106,7 +108,11 @@ pub fn get_new_name(
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let dt = get_datetime(&exif);
-    let im = types::ImageMetadata { exif, datetime: dt };
+    let im = types::ImageMetadata {
+        exif,
+        datetime: dt,
+        path: path.to_path_buf(),
+    };
     let mut name = render_format(&im, &cfg.fmt)?;
 
     if let Some(pad) = cfg.counter_width {

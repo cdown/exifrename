@@ -8,6 +8,7 @@ pub type DatetimeCallback = fn(&DateTime) -> String;
 pub struct ImageMetadata {
     pub exif: Exif,
     pub datetime: Option<DateTime>,
+    pub path: PathBuf,
 }
 
 #[derive(Parser, Debug)]

@@ -21,6 +21,10 @@ pub fn get_exif_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
     out.map(|s| s.replace('/', "_"))
 }
 
+pub fn get_original_filename(im: &types::ImageMetadata) -> Option<String> {
+    Some(im.path.file_stem()?.to_str()?.to_string())
+}
+
 pub fn get_datetime_field(
     im: &types::ImageMetadata,
     cb: types::DatetimeCallback,
