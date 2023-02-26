@@ -60,11 +60,11 @@ pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
                             .map(|&(_, f)| f)
                         {
                             Some(cb) => cb(im)
-                                .with_context(|| format!("missing data for field '{}'", word))?,
-                            None => util::die!("invalid field: '{{{}}}'", word),
+                                .with_context(|| format!("missing data for field '{word}'"))?,
+                            None => util::die!("invalid field: '{{{word}}}'"),
                         };
                         word.clear();
-                        write!(&mut out, "{}", rep)?;
+                        write!(&mut out, "{rep}")?;
                         in_fmt = false;
                         continue;
                     } else {
