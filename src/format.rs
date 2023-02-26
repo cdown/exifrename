@@ -100,18 +100,17 @@ pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
 }
 
 pub fn get_new_name(
+    cfg: &types::Config,
     path: &Path,
-    fmt: &str,
     counter: &mut HashMap<String, u16>,
-    width: Option<usize>,
 ) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let dt = get_datetime(&exif);
     let im = types::ImageMetadata { exif, datetime: dt };
-    let mut name = render_format(&im, fmt)?;
+    let mut name = render_format(&im, &cfg.fmt)?;
 
-    if let Some(pad) = width {
+    if let Some(pad) = cfg.counter_width {
         let cnt = counter.entry(name.clone()).or_default();
         *cnt += 1;
         write!(&mut name, "_{:0width$}", *cnt, width = pad)?;
