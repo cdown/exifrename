@@ -7,7 +7,7 @@ use std::str;
 use anyhow::{Context, Result};
 use hashbrown::HashMap;
 
-use crate::metadata::{get_datetime, get_datetime_field, get_field};
+use crate::metadata::{get_datetime, get_datetime_field, get_exif_field};
 use crate::{types, util};
 use exif::{Reader, Tag};
 
@@ -23,19 +23,19 @@ static FORMATTERS: &[(&str, types::FormatterCallback)] = &[
     ("minute", |im| get_datetime_field(im, |d| format!("{:02}", d.minute))),
     ("second", |im| get_datetime_field(im, |d| format!("{:02}", d.second))),
     // Exposure attributes
-    ("fstop", |im| get_field(im, Tag::FNumber)),
-    ("iso", |im| get_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-    ("shutter_speed", |im| get_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    ("fstop", |im| get_exif_field(im, Tag::FNumber)),
+    ("iso", |im| get_exif_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
+    ("shutter_speed", |im| get_exif_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
     // Camera attributes
-    ("camera_make", |im| get_field(im, Tag::Make)),
-    ("camera_model", |im| get_field(im, Tag::Model)),
-    ("camera_serial", |im| get_field(im, Tag::BodySerialNumber)),
+    ("camera_make", |im| get_exif_field(im, Tag::Make)),
+    ("camera_model", |im| get_exif_field(im, Tag::Model)),
+    ("camera_serial", |im| get_exif_field(im, Tag::BodySerialNumber)),
     // Lens attributes
-    ("lens_make", |im| get_field(im, Tag::LensMake)),
-    ("lens_model", |im| get_field(im, Tag::LensModel)),
-    ("lens_serial", |im| get_field(im, Tag::LensSerialNumber)),
-    ("focal_length", |im| get_field(im, Tag::FocalLength)),
-    ("focal_length_35", |im| get_field(im, Tag::FocalLengthIn35mmFilm)),
+    ("lens_make", |im| get_exif_field(im, Tag::LensMake)),
+    ("lens_model", |im| get_exif_field(im, Tag::LensModel)),
+    ("lens_serial", |im| get_exif_field(im, Tag::LensSerialNumber)),
+    ("focal_length", |im| get_exif_field(im, Tag::FocalLength)),
+    ("focal_length_35", |im| get_exif_field(im, Tag::FocalLengthIn35mmFilm)),
 ];
 
 pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {

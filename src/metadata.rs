@@ -3,7 +3,7 @@ use std::str;
 use crate::types;
 use exif::{DateTime, Exif, In, Tag, Value};
 
-pub fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
+pub fn get_exif_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
     let mut out = None;
 
     if let Some(field) = im.exif.get_field(tag, In::PRIMARY) {
