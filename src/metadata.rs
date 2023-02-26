@@ -11,7 +11,7 @@ pub fn get_exif_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
             // Default formatter puts ASCII values inside quotes, which we don't want
             Value::Ascii(ref vec) if !vec.is_empty() => {
                 if let Ok(val) = str::from_utf8(&vec[0]) {
-                    out = Some(val.to_string());
+                    out = Some(val.to_owned());
                 }
             }
             _ => out = Some(field.display_value().to_string()),
@@ -22,7 +22,7 @@ pub fn get_exif_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
 }
 
 pub fn get_original_filename(im: &types::ImageMetadata) -> Option<String> {
-    Some(im.path.file_stem()?.to_str()?.to_string())
+    Some(im.path.file_stem()?.to_str()?.to_owned())
 }
 
 pub fn get_datetime_field(
