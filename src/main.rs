@@ -14,34 +14,39 @@ use tempfile::NamedTempFile;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
 
-type FormatterCallback = fn(&Exif) -> Option<String>;
+type FormatterCallback = fn(&ImageMetadata) -> Option<String>;
 type DatetimeCallback = fn(&DateTime) -> String;
+
+struct ImageMetadata {
+    exif: Exif,
+    datetime: Option<DateTime>,
+}
 
 // This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
 // more commonly requested fields higher.
 static FORMATTERS: &[(&str, FormatterCallback)] = &[
     // Date/time attributes
-    ("year", |e| get_datetime_field(e, |d| format!("{}", d.year))),
-    ("year2", |e| get_datetime_field(e, |d| format!("{}", d.year % 100))),
-    ("month", |e| get_datetime_field(e, |d| format!("{:02}", d.month))),
-    ("day", |e| get_datetime_field(e, |d| format!("{:02}", d.day))),
-    ("hour", |e| get_datetime_field(e, |d| format!("{:02}", d.hour))),
-    ("minute", |e| get_datetime_field(e, |d| format!("{:02}", d.minute))),
-    ("second", |e| get_datetime_field(e, |d| format!("{:02}", d.second))),
+    ("year", |im| get_datetime_field(im, |d| format!("{}", d.year))),
+    ("year2", |im| get_datetime_field(im, |d| format!("{}", d.year % 100))),
+    ("month", |im| get_datetime_field(im, |d| format!("{:02}", d.month))),
+    ("day", |im| get_datetime_field(im, |d| format!("{:02}", d.day))),
+    ("hour", |im| get_datetime_field(im, |d| format!("{:02}", d.hour))),
+    ("minute", |im| get_datetime_field(im, |d| format!("{:02}", d.minute))),
+    ("second", |im| get_datetime_field(im, |d| format!("{:02}", d.second))),
     // Exposure attributes
-    ("fstop", |e| get_field(e, Tag::FNumber)),
-    ("iso", |e| get_field(e, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-    ("shutter_speed", |e| get_field(e, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    ("fstop", |im| get_field(im, Tag::FNumber)),
+    ("iso", |im| get_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
+    ("shutter_speed", |im| get_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
     // Camera attributes
-    ("camera_make", |e| get_field(e, Tag::Make)),
-    ("camera_model", |e| get_field(e, Tag::Model)),
-    ("camera_serial", |e| get_field(e, Tag::BodySerialNumber)),
+    ("camera_make", |im| get_field(im, Tag::Make)),
+    ("camera_model", |im| get_field(im, Tag::Model)),
+    ("camera_serial", |im| get_field(im, Tag::BodySerialNumber)),
     // Lens attributes
-    ("lens_make", |e| get_field(e, Tag::LensMake)),
-    ("lens_model", |e| get_field(e, Tag::LensModel)),
-    ("lens_serial", |e| get_field(e, Tag::LensSerialNumber)),
-    ("focal_length", |e| get_field(e, Tag::FocalLength)),
-    ("focal_length_35", |e| get_field(e, Tag::FocalLengthIn35mmFilm)),
+    ("lens_make", |im| get_field(im, Tag::LensMake)),
+    ("lens_model", |im| get_field(im, Tag::LensModel)),
+    ("lens_serial", |im| get_field(im, Tag::LensSerialNumber)),
+    ("focal_length", |im| get_field(im, Tag::FocalLength)),
+    ("focal_length_35", |im| get_field(im, Tag::FocalLengthIn35mmFilm)),
 ];
 
 #[derive(Parser, Debug)]
@@ -115,10 +120,10 @@ macro_rules! die {
     }}
 }
 
-fn get_field(exif: &Exif, tag: Tag) -> Option<String> {
+fn get_field(im: &ImageMetadata, tag: Tag) -> Option<String> {
     let mut out = None;
 
-    if let Some(field) = exif.get_field(tag, In::PRIMARY) {
+    if let Some(field) = im.exif.get_field(tag, In::PRIMARY) {
         match field.value {
             // Default formatter puts ASCII values inside quotes, which we don't want
             Value::Ascii(ref vec) if !vec.is_empty() => {
@@ -133,11 +138,10 @@ fn get_field(exif: &Exif, tag: Tag) -> Option<String> {
     out.map(|s| s.replace('/', "_"))
 }
 
-fn get_datetime_field(exif: &Exif, cb: DatetimeCallback) -> Option<String> {
-    Some(cb(get_datetime(exif).as_ref()?))
+fn get_datetime_field(im: &ImageMetadata, cb: DatetimeCallback) -> Option<String> {
+    im.datetime.as_ref().map(|dt| cb(dt))
 }
 
-// TODO: caching?
 fn get_datetime(exif: &Exif) -> Option<DateTime> {
     if let Some(field) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
         match field.value {
@@ -153,7 +157,7 @@ fn get_datetime(exif: &Exif) -> Option<DateTime> {
     None
 }
 
-fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
+fn render_format(im: &ImageMetadata, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
 
@@ -172,7 +176,7 @@ fn render_format(exif: &Exif, fmt: &str) -> Result<String> {
                             .find(|&&(s, _)| s == word)
                             .map(|&(_, f)| f)
                         {
-                            Some(cb) => cb(exif)
+                            Some(cb) => cb(im)
                                 .with_context(|| format!("missing data for field '{}'", word))?,
                             None => die!("invalid field: '{{{}}}'", word),
                         };
@@ -288,7 +292,12 @@ fn get_new_name(
 ) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
-    let mut name = render_format(&exif, fmt)?;
+    let dt = get_datetime(&exif);
+    let im = ImageMetadata {
+        exif: exif,
+        datetime: dt,
+    };
+    let mut name = render_format(&im, fmt)?;
 
     if let Some(pad) = width {
         let cnt = counter.entry(name.clone()).or_default();
