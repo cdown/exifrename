@@ -55,21 +55,18 @@ pub fn rename_creating_dirs(
 
     // Trying to rename cross device? Just copy and unlink the old one
     let ren_samedev = rename(from, &to, overwrite);
+
     if let Err(ref err) = ren_samedev {
-        if let Some(os_err) = err.raw_os_error() {
-            if os_err == libc::EXDEV {
-                let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
-                fs::copy(from, &tmp_path)?;
-                let ren_xdev = rename(&tmp_path, &to, overwrite);
-                match ren_xdev {
-                    Ok(_) => fs::remove_file(from)?,
-                    Err(_) => {
-                        fs::remove_file(tmp_path)?;
-                        ren_xdev?;
-                    }
+        if err.raw_os_error() == Some(libc::EXDEV) {
+            let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
+            fs::copy(from, &tmp_path)?;
+            let ren_xdev = rename(&tmp_path, &to, overwrite);
+            match ren_xdev {
+                Ok(_) => fs::remove_file(from)?,
+                Err(_) => {
+                    fs::remove_file(tmp_path)?;
+                    ren_xdev?;
                 }
-            } else {
-                ren_samedev?;
             }
         } else {
             ren_samedev?;
