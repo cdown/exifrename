@@ -9,6 +9,7 @@ use std::str;
 use anyhow::{Context, Result};
 use clap::Parser;
 
+use crate::types;
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
 
 pub fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
@@ -29,7 +30,10 @@ pub fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
     out.map(|s| s.replace('/', "_"))
 }
 
-pub fn get_datetime_field(im: &types::ImageMetadata, cb: types::DatetimeCallback) -> Option<String> {
+pub fn get_datetime_field(
+    im: &types::ImageMetadata,
+    cb: types::DatetimeCallback,
+) -> Option<String> {
     im.datetime.as_ref().map(cb)
 }
 

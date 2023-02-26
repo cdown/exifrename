@@ -1,9 +1,9 @@
 use exif::{DateTime, Exif};
 
-type FormatterCallback = fn(&ImageMetadata) -> Option<String>;
-type DatetimeCallback = fn(&DateTime) -> String;
+pub type FormatterCallback = fn(&ImageMetadata) -> Option<String>;
+pub type DatetimeCallback = fn(&DateTime) -> String;
 
-struct ImageMetadata {
-    exif: Exif,
-    datetime: Option<DateTime>,
+pub struct ImageMetadata {
+    pub exif: Exif,
+    pub datetime: Option<DateTime>,
 }

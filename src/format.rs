@@ -9,12 +9,13 @@ use std::str;
 use anyhow::{Context, Result};
 use clap::Parser;
 
+use crate::metadata::{get_datetime, get_datetime_field, get_field};
+use crate::{types, util};
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
-use metadata::{get_field, get_datetime_field}
 
 // This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
 // more commonly requested fields higher.
-static FORMATTERS: &[(&str, FormatterCallback)] = &[
+static FORMATTERS: &[(&str, types::FormatterCallback)] = &[
     // Date/time attributes
     ("year", |im| get_datetime_field(im, |d| format!("{}", d.year))),
     ("year2", |im| get_datetime_field(im, |d| format!("{}", d.year % 100))),
@@ -107,7 +108,7 @@ pub fn get_new_name(
 ) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
-    let dt = metadata::get_datetime(&exif);
+    let dt = get_datetime(&exif);
     let im = types::ImageMetadata { exif, datetime: dt };
     let mut name = render_format(&im, fmt)?;
 
