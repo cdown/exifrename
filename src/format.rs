@@ -2,16 +2,15 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
-use std::process;
+use std::path::Path;
+
 use std::str;
 
 use anyhow::{Context, Result};
-use clap::Parser;
 
 use crate::metadata::{get_datetime, get_datetime_field, get_field};
 use crate::{types, util};
-use exif::{DateTime, Exif, In, Reader, Tag, Value};
+use exif::{Reader, Tag};
 
 // This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
 // more commonly requested fields higher.

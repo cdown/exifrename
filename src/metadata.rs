@@ -1,16 +1,7 @@
-use std::collections::HashMap;
-use std::fmt::Write;
-use std::fs;
-use std::io;
-use std::path::{Path, PathBuf};
-use std::process;
 use std::str;
 
-use anyhow::{Context, Result};
-use clap::Parser;
-
 use crate::types;
-use exif::{DateTime, Exif, In, Reader, Tag, Value};
+use exif::{DateTime, Exif, In, Tag, Value};
 
 pub fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
     let mut out = None;
