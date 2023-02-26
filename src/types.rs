@@ -1,4 +1,4 @@
-use exif::DateTime;
+use exif::{DateTime, Exif};
 
 type FormatterCallback = fn(&ImageMetadata) -> Option<String>;
 type DatetimeCallback = fn(&DateTime) -> String;

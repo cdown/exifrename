@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
+use metadata::{get_field, get_datetime_field}
 
 // This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
 // more commonly requested fields higher.
@@ -38,7 +39,7 @@ static FORMATTERS: &[(&str, FormatterCallback)] = &[
     ("focal_length_35", |im| get_field(im, Tag::FocalLengthIn35mmFilm)),
 ];
 
-fn render_format(im: &ImageMetadata, fmt: &str) -> Result<String> {
+fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
 
@@ -59,14 +60,14 @@ fn render_format(im: &ImageMetadata, fmt: &str) -> Result<String> {
                         {
                             Some(cb) => cb(im)
                                 .with_context(|| format!("missing data for field '{}'", word))?,
-                            None => die!("invalid field: '{{{}}}'", word),
+                            None => util::die!("invalid field: '{{{}}}'", word),
                         };
                         word.clear();
                         write!(&mut out, "{}", rep)?;
                         in_fmt = false;
                         continue;
                     } else {
-                        die!("mismatched '}}' in format");
+                        util::die!("mismatched '}}' in format");
                     }
                 }
             }
@@ -88,7 +89,7 @@ fn render_format(im: &ImageMetadata, fmt: &str) -> Result<String> {
                 in_fmt = false;
                 continue;
             } else {
-                die!("nested '{{' in format");
+                util::die!("nested '{{' in format");
             }
         }
 
@@ -106,8 +107,8 @@ fn get_new_name(
 ) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
-    let dt = get_datetime(&exif);
-    let im = ImageMetadata { exif, datetime: dt };
+    let dt = metadata::get_datetime(&exif);
+    let im = types::ImageMetadata { exif, datetime: dt };
     let mut name = render_format(&im, fmt)?;
 
     if let Some(pad) = width {

@@ -79,7 +79,7 @@ fn main() -> Result<()> {
     let mut counter: HashMap<String, u16> = HashMap::new();
 
     for file in args.files {
-        match get_new_name(&file, &args.fmt, &mut counter, args.counter) {
+        match format::get_new_name(&file, &args.fmt, &mut counter, args.counter) {
             Ok(new_name) => {
                 println!("{} -> {}", file.display(), new_name);
                 if !args.dry_run {
