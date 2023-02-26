@@ -111,8 +111,10 @@ pub fn get_new_name(
     let mut name = render_format(&im, &cfg.fmt)?;
 
     if let Some(pad) = cfg.counter_width {
-        let cnt = counter.entry(name.clone()).or_default();
-        *cnt += 1;
+        let cnt = counter
+            .entry(name.clone())
+            .and_modify(|c| *c += 1)
+            .or_insert(1);
         write!(&mut name, "_{:0width$}", *cnt, width = pad)?;
     }
 
