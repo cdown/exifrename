@@ -11,7 +11,7 @@ use clap::Parser;
 
 use exif::{DateTime, Exif, In, Reader, Tag, Value};
 
-fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
+pub fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
     let mut out = None;
 
     if let Some(field) = im.exif.get_field(tag, In::PRIMARY) {
@@ -29,11 +29,11 @@ fn get_field(im: &types::ImageMetadata, tag: Tag) -> Option<String> {
     out.map(|s| s.replace('/', "_"))
 }
 
-fn get_datetime_field(im: &types::ImageMetadata, cb: types::DatetimeCallback) -> Option<String> {
+pub fn get_datetime_field(im: &types::ImageMetadata, cb: types::DatetimeCallback) -> Option<String> {
     im.datetime.as_ref().map(cb)
 }
 
-fn get_datetime(exif: &Exif) -> Option<DateTime> {
+pub fn get_datetime(exif: &Exif) -> Option<DateTime> {
     if let Some(field) = exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) {
         match field.value {
             Value::Ascii(ref vec) if !vec.is_empty() => {

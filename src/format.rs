@@ -39,7 +39,7 @@ static FORMATTERS: &[(&str, FormatterCallback)] = &[
     ("focal_length_35", |im| get_field(im, Tag::FocalLengthIn35mmFilm)),
 ];
 
-fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
+pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
 
@@ -99,7 +99,7 @@ fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
     Ok(out)
 }
 
-fn get_new_name(
+pub fn get_new_name(
     path: &Path,
     fmt: &str,
     counter: &mut HashMap<String, u16>,
