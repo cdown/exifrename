@@ -40,7 +40,7 @@ static FORMATTERS: &[(&str, types::FormatterCallback)] = &[
     ("filename", get_original_filename),
 ];
 
-pub fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
+fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
 

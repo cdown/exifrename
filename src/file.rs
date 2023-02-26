@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use tempfile::NamedTempFile;
 
-pub fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
+fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     let from_c = CString::new(from.as_os_str().as_bytes())?;
     let to_c = CString::new(to.as_os_str().as_bytes())?;
     let flags = if overwrite { 0 } else { libc::RENAME_NOREPLACE };
