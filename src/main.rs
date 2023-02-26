@@ -292,9 +292,9 @@ fn get_new_name(
     let mut name = render_format(&exif, fmt)?;
 
     if let Some(pad) = width {
-        *counter.entry(name.clone()).or_default() += 1;
-        let cnt = counter[&name];
-        write!(&mut name, "_{:0width$}", cnt, width = pad)?;
+        let cnt = counter.entry(name.clone()).or_default();
+        *cnt += 1;
+        write!(&mut name, "_{:0width$}", *cnt, width = pad)?;
     }
 
     if let Some(ext) = path.extension() {
