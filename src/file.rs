@@ -1,13 +1,15 @@
-use std::ffi::CString;
 use std::fs;
 use std::io;
-use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use tempfile::NamedTempFile;
 
+#[cfg(target_os = "linux")]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
+    use std::ffi::CString;
+    use std::os::unix::ffi::OsStrExt;
+
     let from_c = CString::new(from.as_os_str().as_bytes())?;
     let to_c = CString::new(to.as_os_str().as_bytes())?;
     let flags = if overwrite { 0 } else { libc::RENAME_NOREPLACE };
@@ -28,6 +30,15 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     } else {
         Err(io::Error::last_os_error())
     }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
+    use crate::util::die;
+    if !overwrite {
+        die!("overwrite-free rename not implemented for non-Linux");
+    }
+    fs::rename(from, to)
 }
 
 pub fn copy_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool) -> Result<()> {
