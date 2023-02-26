@@ -1,12 +1,11 @@
-use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 use std::io;
 use std::path::Path;
-
 use std::str;
 
 use anyhow::{Context, Result};
+use hashbrown::HashMap;
 
 use crate::metadata::{get_datetime, get_datetime_field, get_field};
 use crate::{types, util};
@@ -112,10 +111,11 @@ pub fn get_new_name(
 
     if let Some(pad) = cfg.counter_width {
         let cnt = counter
-            .entry(name.clone())
-            .and_modify(|c| *c += 1)
-            .or_insert(1);
-        write!(&mut name, "_{:0width$}", *cnt, width = pad)?;
+            .raw_entry_mut()
+            .from_key(&name)
+            .and_modify(|_, c| *c += 1)
+            .or_insert_with(|| (name.clone(), 1));
+        write!(&mut name, "_{:0width$}", *cnt.1, width = pad)?;
     }
 
     if let Some(ext) = path.extension() {

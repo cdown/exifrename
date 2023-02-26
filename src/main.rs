@@ -1,7 +1,7 @@
 use clap::Parser;
-use std::collections::HashMap;
 
 use anyhow::Result;
+use hashbrown::HashMap;
 
 mod file;
 mod format;
