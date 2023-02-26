@@ -3,7 +3,6 @@ use std::ffi::CString;
 use std::fmt::Write;
 use std::fs;
 use std::io;
-use std::io::BufReader;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -288,7 +287,7 @@ fn get_new_name(
     width: Option<usize>,
 ) -> Result<String> {
     let file = fs::File::open(path)?;
-    let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
+    let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let mut name = render_format(&exif, fmt)?;
 
     if let Some(pad) = width {
