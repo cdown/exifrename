@@ -2,6 +2,12 @@
 name = "exifrename"
 version = "0.1.0"
 edition = "2021"
+authors = ["Chris Down <chris@chrisdown.name>"]
+description = "Rename or copy files based on EXIF data."
+homepage = "https://github.com/cdown/exifrename"
+readme = "README.md"
+keywords = ["exif", "image", "rename", "organise", "organize"]
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.69"
