@@ -1,0 +1,21 @@
+
+jobs:
+  build_and_test:
+    name: CI
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all -- -D warnings
+      - run: cargo test --release --all-features --all
+      - run: cargo build --release --all-features
+
+on: push
