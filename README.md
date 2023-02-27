@@ -8,12 +8,12 @@ exifrename renames or copies files based on EXIF data.
 
 ## Usage
 
+See `--help` for more information on how to populate `FORMAT` and other
+available options, but the basic invocation is:
+
     exifrename -f FORMAT FILES
 
-You can also see what would be changed first using `--dry-run`. See `--help`
-for more options.
-
-How to specify `FORMAT` can also be found in `--help`.
+You can also see what would be changed first using `--dry-run`.
 
 ## Performance
 
