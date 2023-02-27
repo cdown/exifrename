@@ -2,6 +2,10 @@
 
 exifrename renames or copies files based on EXIF data.
 
+## Installation
+
+    cargo install exifrename
+
 ## Usage
 
     exifrename -f FORMAT FILES
