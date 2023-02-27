@@ -5,6 +5,11 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use tempfile::NamedTempFile;
 
+#[cfg(target_family = "unix")]
+use libc::EXDEV as xdev_err;
+#[cfg(target_family = "windows")]
+use winapi::shared::winerror::ERROR_NOT_SAME_DEVICE as xdev_err;
+
 #[cfg(target_os = "linux")]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use std::ffi::CString;
@@ -68,7 +73,9 @@ pub fn rename_creating_dirs(
     let ren_samedev = rename(from, &to, overwrite);
 
     if let Err(ref err) = ren_samedev {
-        if err.raw_os_error() == Some(libc::EXDEV) {
+        #[allow(clippy::unnecessary_cast)] // Necessary for Windows only
+        let xdev_err_cast = xdev_err as i32;
+        if err.raw_os_error() == Some(xdev_err_cast) {
             copy_creating_dirs(from, &to, overwrite)?;
             fs::remove_file(from)?;
         } else {

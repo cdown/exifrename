@@ -105,6 +105,7 @@ dependencies = [
  "kamadak-exif",
  "libc",
  "tempfile",
+ "winapi",
 ]
 
 [[package]]
