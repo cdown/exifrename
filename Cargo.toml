@@ -9,4 +9,5 @@ clap = { version = "4.1.6", features = ["derive"] }
 hashbrown = "0.13.2"
 kamadak-exif = "0.5.5"
 libc = "0.2.139"
+phf = { version = "0.11.1", features = ["macros"] }
 tempfile = "3.3.0"

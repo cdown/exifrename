@@ -6,6 +6,7 @@ use std::str;
 
 use anyhow::{Context, Result};
 use hashbrown::HashMap;
+use phf::phf_map;
 
 use crate::metadata::{get_datetime, get_datetime_field, get_exif_field, get_original_filename};
 use crate::{types, util};
@@ -13,32 +14,32 @@ use exif::{Reader, Tag};
 
 // This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
 // more commonly requested fields higher.
-static FORMATTERS: &[(&str, types::FormatterCallback)] = &[
+static FORMATTERS: phf::Map<&'static str, types::FormatterCallback> = phf_map! {
     // Date/time attributes
-    ("year", |im| get_datetime_field(im, |d| format!("{}", d.year))),
-    ("year2", |im| get_datetime_field(im, |d| format!("{}", d.year % 100))),
-    ("month", |im| get_datetime_field(im, |d| format!("{:02}", d.month))),
-    ("day", |im| get_datetime_field(im, |d| format!("{:02}", d.day))),
-    ("hour", |im| get_datetime_field(im, |d| format!("{:02}", d.hour))),
-    ("minute", |im| get_datetime_field(im, |d| format!("{:02}", d.minute))),
-    ("second", |im| get_datetime_field(im, |d| format!("{:02}", d.second))),
+    "year" => |im| get_datetime_field(im, |d| format!("{}", d.year)),
+    "year2" => |im| get_datetime_field(im, |d| format!("{}", d.year % 100)),
+    "month" => |im| get_datetime_field(im, |d| format!("{:02}", d.month)),
+    "day" => |im| get_datetime_field(im, |d| format!("{:02}", d.day)),
+    "hour" => |im| get_datetime_field(im, |d| format!("{:02}", d.hour)),
+    "minute" => |im| get_datetime_field(im, |d| format!("{:02}", d.minute)),
+    "second" => |im| get_datetime_field(im, |d| format!("{:02}", d.second)),
     // Exposure attributes
-    ("fstop", |im| get_exif_field(im, Tag::FNumber)),
-    ("iso", |im| get_exif_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-    ("shutter_speed", |im| get_exif_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    "fstop" => |im| get_exif_field(im, Tag::FNumber),
+    "iso" => |im| get_exif_field(im, Tag::PhotographicSensitivity), // TODO: check SensitivityType/0x8830?
+    "shutter_speed" => |im| get_exif_field(im, Tag::ExposureTime), // non-APEX, which has a useful display value
     // Camera attributes
-    ("camera_make", |im| get_exif_field(im, Tag::Make)),
-    ("camera_model", |im| get_exif_field(im, Tag::Model)),
-    ("camera_serial", |im| get_exif_field(im, Tag::BodySerialNumber)),
+    "camera_make" => |im| get_exif_field(im, Tag::Make),
+    "camera_model" => |im| get_exif_field(im, Tag::Model),
+    "camera_serial" => |im| get_exif_field(im, Tag::BodySerialNumber),
     // Lens attributes
-    ("lens_make", |im| get_exif_field(im, Tag::LensMake)),
-    ("lens_model", |im| get_exif_field(im, Tag::LensModel)),
-    ("lens_serial", |im| get_exif_field(im, Tag::LensSerialNumber)),
-    ("focal_length", |im| get_exif_field(im, Tag::FocalLength)),
-    ("focal_length_35", |im| get_exif_field(im, Tag::FocalLengthIn35mmFilm)),
+    "lens_make" => |im| get_exif_field(im, Tag::LensMake),
+    "lens_model" => |im| get_exif_field(im, Tag::LensModel),
+    "lens_serial" => |im| get_exif_field(im, Tag::LensSerialNumber),
+    "focal_length" => |im| get_exif_field(im, Tag::FocalLength),
+    "focal_length_35" => |im| get_exif_field(im, Tag::FocalLengthIn35mmFilm),
     // Filesystem attributes
-    ("filename", get_original_filename),
-];
+    "filename" => get_original_filename,
+};
 
 fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
     let mut chars = fmt.chars().peekable();
@@ -54,11 +55,7 @@ fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
                 Some(_) => out.push(cur),
                 None => {
                     if in_fmt {
-                        let rep = match FORMATTERS
-                            .iter()
-                            .find(|&&(s, _)| s == word)
-                            .map(|&(_, f)| f)
-                        {
+                        let rep = match FORMATTERS.get(&word) {
                             Some(cb) => cb(im)
                                 .with_context(|| format!("missing data for field '{word}'"))?,
                             None => util::die!("invalid field: '{{{word}}}'"),
