@@ -4,71 +4,90 @@ use std::io;
 use std::path::Path;
 use std::str;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use hashbrown::HashMap;
 
 use crate::metadata::{get_datetime, get_datetime_field, get_exif_field, get_original_filename};
-use crate::{types, util};
+use crate::types;
 use exif::{Reader, Tag};
+
+macro_rules! fm {
+    ($name:tt, $cb:expr) => {
+        types::Formatter {
+            name: $name,
+            cb: $cb,
+        }
+    };
+}
 
 // This is super small: even with thousands of lookups using a phf::Map is slower. Try to order
 // more commonly requested fields higher.
-static FORMATTERS: &[(&str, types::FormatterCallback)] = &[
+static FORMATTERS: &[types::Formatter] = &[
     // Date/time attributes
-    ("year", |im| get_datetime_field(im, |d| format!("{}", d.year))),
-    ("year2", |im| get_datetime_field(im, |d| format!("{}", d.year % 100))),
-    ("month", |im| get_datetime_field(im, |d| format!("{:02}", d.month))),
-    ("day", |im| get_datetime_field(im, |d| format!("{:02}", d.day))),
-    ("hour", |im| get_datetime_field(im, |d| format!("{:02}", d.hour))),
-    ("minute", |im| get_datetime_field(im, |d| format!("{:02}", d.minute))),
-    ("second", |im| get_datetime_field(im, |d| format!("{:02}", d.second))),
+    fm!("year", |im| get_datetime_field(im, |d| format!("{}", d.year))),
+    fm!("year2", |im| get_datetime_field(im, |d| format!("{}", d.year % 100))),
+    fm!("month", |im| get_datetime_field(im, |d| format!("{:02}", d.month))),
+    fm!("day", |im| get_datetime_field(im, |d| format!("{:02}", d.day))),
+    fm!("hour", |im| get_datetime_field(im, |d| format!("{:02}", d.hour))),
+    fm!("minute", |im| get_datetime_field(im, |d| format!("{:02}", d.minute))),
+    fm!("second", |im| get_datetime_field(im, |d| format!("{:02}", d.second))),
     // Exposure attributes
-    ("fstop", |im| get_exif_field(im, Tag::FNumber)),
-    ("iso", |im| get_exif_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-    ("shutter_speed", |im| get_exif_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
+    fm!("fstop", |im| get_exif_field(im, Tag::FNumber)),
+    fm!("iso", |im| get_exif_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
+    fm!("shutter_speed", |im| get_exif_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
     // Camera attributes
-    ("camera_make", |im| get_exif_field(im, Tag::Make)),
-    ("camera_model", |im| get_exif_field(im, Tag::Model)),
-    ("camera_serial", |im| get_exif_field(im, Tag::BodySerialNumber)),
+    fm!("camera_make", |im| get_exif_field(im, Tag::Make)),
+    fm!("camera_model", |im| get_exif_field(im, Tag::Model)),
+    fm!("camera_serial", |im| get_exif_field(im, Tag::BodySerialNumber)),
     // Lens attributes
-    ("lens_make", |im| get_exif_field(im, Tag::LensMake)),
-    ("lens_model", |im| get_exif_field(im, Tag::LensModel)),
-    ("lens_serial", |im| get_exif_field(im, Tag::LensSerialNumber)),
-    ("focal_length", |im| get_exif_field(im, Tag::FocalLength)),
-    ("focal_length_35", |im| get_exif_field(im, Tag::FocalLengthIn35mmFilm)),
+    fm!("lens_make", |im| get_exif_field(im, Tag::LensMake)),
+    fm!("lens_model", |im| get_exif_field(im, Tag::LensModel)),
+    fm!("lens_serial", |im| get_exif_field(im, Tag::LensSerialNumber)),
+    fm!("focal_length", |im| get_exif_field(im, Tag::FocalLength)),
+    fm!("focal_length_35", |im| get_exif_field(im, Tag::FocalLengthIn35mmFilm)),
     // Filesystem attributes
-    ("filename", get_original_filename),
+    fm!("filename", get_original_filename),
 ];
 
-fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
+fn render_format(im: &types::ImageMetadata, fmt: &Vec<types::FormatPiece>) -> Result<String> {
+    // Ballpark guess large enough to usually avoid extra allocations
+    let mut out = String::with_capacity(fmt.len() * 4);
+    for part in fmt {
+        match part {
+            types::FormatPiece::Char(c) => out.push(*c),
+            types::FormatPiece::Fmt(f) => write!(
+                &mut out,
+                "{}",
+                (f.cb)(im).with_context(|| format!("missing data for field '{}'", f.name))?
+            )?,
+        }
+    }
+    Ok(out)
+}
+
+pub fn format_to_formatpiece(fmt: &str) -> Result<Vec<types::FormatPiece>> {
     let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
 
     // Ballpark guesses large enough to usually avoid extra allocations
-    let mut out = String::with_capacity(fmt.len() * 3);
+    let mut out: Vec<types::FormatPiece> = Vec::with_capacity(fmt.len());
     let mut word = String::with_capacity(16);
 
     while let Some(cur) = chars.next() {
         if cur == '}' {
             match chars.next_if_eq(&'}') {
-                Some(_) => out.push(cur),
+                Some(_) => out.push(types::FormatPiece::Char(cur)),
                 None => {
                     if in_fmt {
-                        let rep = match FORMATTERS
-                            .iter()
-                            .find(|&&(s, _)| s == word)
-                            .map(|&(_, f)| f)
-                        {
-                            Some(cb) => cb(im)
-                                .with_context(|| format!("missing data for field '{word}'"))?,
-                            None => util::die!("invalid field: '{{{word}}}'"),
+                        match FORMATTERS.iter().find(|&f| f.name == word) {
+                            Some(f) => out.push(types::FormatPiece::Fmt(f)),
+                            None => bail!("invalid field: '{{{word}}}'"),
                         };
                         word.clear();
-                        write!(&mut out, "{rep}")?;
                         in_fmt = false;
                         continue;
                     }
-                    util::die!("mismatched '}}' in format");
+                    bail!("mismatched '}}' in format");
                 }
             }
         }
@@ -77,7 +96,7 @@ fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
             if cur == '{' {
                 in_fmt = true;
             } else {
-                out.push(cur);
+                out.push(types::FormatPiece::Char(cur));
             }
 
             continue;
@@ -85,11 +104,11 @@ fn render_format(im: &types::ImageMetadata, fmt: &str) -> Result<String> {
 
         if cur == '{' {
             if word.is_empty() {
-                out.push(cur);
+                out.push(types::FormatPiece::Char(cur));
                 in_fmt = false;
                 continue;
             }
-            util::die!("nested '{{' in format");
+            bail!("nested '{{' in format");
         }
 
         word.push(cur);
@@ -102,6 +121,7 @@ pub fn get_new_name(
     cfg: &types::Config,
     path: &Path,
     counter: &mut HashMap<String, u16>,
+    fp: &Vec<types::FormatPiece>,
 ) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
@@ -111,7 +131,7 @@ pub fn get_new_name(
         datetime: dt,
         path: path.to_path_buf(),
     };
-    let mut name = render_format(&im, &cfg.fmt)?;
+    let mut name = render_format(&im, fp)?;
 
     if let Some(pad) = cfg.counter_width {
         let cnt = counter

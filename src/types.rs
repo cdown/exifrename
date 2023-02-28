@@ -79,3 +79,13 @@ pub struct Config {
 
     pub files: Vec<PathBuf>,
 }
+
+pub struct Formatter {
+    pub name: &'static str,
+    pub cb: FormatterCallback,
+}
+
+pub enum FormatPiece {
+    Char(char),
+    Fmt(&'static Formatter),
+}
