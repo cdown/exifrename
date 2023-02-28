@@ -54,6 +54,17 @@ fn handle_file(cfg: &types::Config, from: &Path, to: &str) -> Result<()> {
     Ok(())
 }
 
+fn handle_finalise(
+    cfg: &types::Config,
+    from: &Path,
+    to: String,
+    cnt: usize,
+    cnt_width: usize,
+) -> Result<()> {
+    let to = finalise_name(cfg, from, to, cnt, cnt_width)?;
+    handle_file(cfg, from, &to)
+}
+
 fn main() -> Result<()> {
     let cfg = types::Config::parse();
     let mut to_from = HashMap::new();
@@ -69,9 +80,8 @@ fn main() -> Result<()> {
         // Starts from 0
         let cnt_width = util::get_usize_len(froms.len() - 1);
         for (cnt, from) in froms.iter().enumerate() {
-            let to = finalise_name(&cfg, from, to.clone(), cnt, cnt_width)?;
-            if let Err(err) = handle_file(&cfg, from, &to) {
-                eprintln!("{} -> {}: {}", from.display(), &to, err);
+            if let Err(err) = handle_finalise(&cfg, from, to.clone(), cnt, cnt_width) {
+                eprintln!("failed to finalise {} -> {}: {}", from.display(), to, err);
             }
         }
     }
