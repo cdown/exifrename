@@ -36,7 +36,6 @@ pub struct Config {
     ///   iso
     ///   shutter_speed
     ///
-    ///
     /// CAMERA:
     ///
     ///   camera_make
