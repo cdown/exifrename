@@ -31,7 +31,7 @@ fn handle_file(
 fn main() -> Result<()> {
     let cfg = types::Config::parse();
     let mut counter: HashMap<String, u16> = HashMap::new();
-    let fp = format::format_to_formatpiece(&cfg.fmt)?;
+    let fp = format::format_to_formatpieces(&cfg.fmt)?;
 
     for file in &cfg.files {
         if let Err(err) = handle_file(&cfg, &mut counter, file, &fp) {

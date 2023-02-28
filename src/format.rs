@@ -65,12 +65,12 @@ fn render_format(im: &types::ImageMetadata, fmt: &Vec<types::FormatPiece>) -> Re
     Ok(out)
 }
 
-pub fn format_to_formatpiece(fmt: &str) -> Result<Vec<types::FormatPiece>> {
+pub fn format_to_formatpieces(fmt: &str) -> Result<Vec<types::FormatPiece>> {
     let mut chars = fmt.chars().peekable();
     let mut in_fmt = false;
 
     // Ballpark guesses large enough to usually avoid extra allocations
-    let mut out: Vec<types::FormatPiece> = Vec::with_capacity(fmt.len());
+    let mut out = Vec::with_capacity(fmt.len());
     let mut word = String::with_capacity(16);
 
     while let Some(cur) = chars.next() {
