@@ -58,11 +58,10 @@ pub struct Config {
 
     #[arg(
         short,
-        long = "counter",
-        name = "WIDTH",
-        help = "Append a counter of this width to each format"
+        long,
+        help = "Do not append a counter like \"_01\" to duplicate filenames"
     )]
-    pub counter_width: Option<usize>,
+    pub no_counter: bool,
 
     #[arg(
         long,

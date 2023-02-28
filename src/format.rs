@@ -5,7 +5,6 @@ use std::path::Path;
 use std::str;
 
 use anyhow::{bail, Context, Result};
-use hashbrown::HashMap;
 
 use crate::metadata::{get_datetime, get_datetime_field, get_exif_field, get_original_filename};
 use crate::types;
@@ -117,12 +116,7 @@ pub fn format_to_formatpieces(fmt: &str) -> Result<Vec<types::FormatPiece>> {
     Ok(out)
 }
 
-pub fn get_new_name(
-    cfg: &types::Config,
-    path: &Path,
-    counter: &mut HashMap<String, u16>,
-    fp: &Vec<types::FormatPiece>,
-) -> Result<String> {
+pub fn get_new_name(path: &Path, fp: &Vec<types::FormatPiece>) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let dt = get_datetime(&exif);
@@ -131,20 +125,5 @@ pub fn get_new_name(
         datetime: dt,
         path: path.to_path_buf(),
     };
-    let mut name = render_format(&im, fp)?;
-
-    if let Some(pad) = cfg.counter_width {
-        let cnt = counter
-            .raw_entry_mut()
-            .from_key(&name)
-            .and_modify(|_, c| *c += 1)
-            .or_insert_with(|| (name.clone(), 1));
-        write!(&mut name, "_{:0width$}", *cnt.1, width = pad)?;
-    }
-
-    if let Some(ext) = path.extension() {
-        write!(&mut name, ".{}", ext.to_str().context("non-utf8 extension")?)?;
-    }
-
-    Ok(name)
+    render_format(&im, fp)
 }
