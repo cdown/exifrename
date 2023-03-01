@@ -64,6 +64,13 @@ pub struct Config {
     pub no_counter: bool,
 
     #[arg(
+        short,
+        long,
+        help = "Print out progress while reading from source files"
+    )]
+    pub verbose: bool,
+
+    #[arg(
         long,
         help = "Don't actually rename files, only display what would happen"
     )]
