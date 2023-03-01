@@ -82,6 +82,7 @@ pub struct Config {
     #[arg(short = 'o', long, help = "Copy instead of renaming")]
     pub copy: bool,
 
+    #[arg(required = true, num_args = 1..)]
     pub files: Vec<PathBuf>,
 }
 
