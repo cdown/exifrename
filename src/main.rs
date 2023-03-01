@@ -12,11 +12,15 @@ mod types;
 mod util;
 
 fn handle_name(
+    cfg: &types::Config,
     to_from: &mut HashMap<String, Vec<PathBuf>>,
     file: &Path,
     fp: &Vec<types::FormatPiece>,
 ) -> Result<()> {
     let new_name = format::get_new_name(file, fp)?;
+    if cfg.verbose {
+        println!("Read EXIF from {}, new intermediate format is {}", file.display(), new_name);
+    }
     let entry = to_from.entry(new_name).or_insert_with(Vec::new);
     (*entry).push(file.to_path_buf());
     Ok(())
@@ -71,7 +75,7 @@ fn main() -> Result<()> {
     let fp = format::format_to_formatpieces(&cfg.fmt)?;
 
     for file in &cfg.files {
-        if let Err(err) = handle_name(&mut to_from, file, &fp) {
+        if let Err(err) = handle_name(&cfg, &mut to_from, file, &fp) {
             eprintln!("failed to get new name for {}: {}", file.display(), err);
         }
     }
