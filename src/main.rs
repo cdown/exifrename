@@ -47,7 +47,6 @@ fn finalise_name(
 }
 
 fn handle_file(cfg: &types::Config, from: &Path, to: &str) -> Result<()> {
-    println!("{} -> {}", from.display(), to);
     if !cfg.dry_run {
         if cfg.copy {
             file::copy_creating_dirs(from, to, cfg.overwrite)?;
@@ -56,17 +55,6 @@ fn handle_file(cfg: &types::Config, from: &Path, to: &str) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn handle_finalise(
-    cfg: &types::Config,
-    from: &Path,
-    to: String,
-    cnt: usize,
-    cnt_width: usize,
-) -> Result<()> {
-    let to = finalise_name(cfg, from, to, cnt, cnt_width)?;
-    handle_file(cfg, from, &to)
 }
 
 fn main() -> Result<()> {
@@ -80,13 +68,28 @@ fn main() -> Result<()> {
         }
     }
 
-    for (to, froms) in to_from {
+    for (to_, froms) in to_from {
         // Starts from 0
         let cnt_width = util::get_usize_len(froms.len() - 1);
         for (cnt, from) in froms.iter().enumerate() {
-            if let Err(err) = handle_finalise(&cfg, from, to.clone(), cnt, cnt_width) {
-                eprintln!("failed to finalise {} -> {}: {}", from.display(), to, err);
+            let to = match finalise_name(&cfg, from, to_.clone(), cnt, cnt_width) {
+                Ok(s) => s,
+                Err(err) => {
+                    eprintln!("failed to finalise {} -> {}: {}", from.display(), to_, err);
+                    continue;
+                }
+            };
+            if let Err(err) = handle_file(&cfg, from, &to) {
+                eprintln!(
+                    "failed to {} {} -> {}: {}",
+                    if cfg.copy { "copy" } else { "rename" },
+                    from.display(),
+                    to,
+                    err
+                );
+                continue;
             }
+            println!("{} -> {}", from.display(), to);
         }
     }
 
