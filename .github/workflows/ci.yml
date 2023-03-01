@@ -18,4 +18,4 @@ jobs:
       - run: cargo test --release --all-features --all
       - run: cargo build --release --all-features
 
-on: push
+on: [push, pull_request]
