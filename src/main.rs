@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use pbr::ProgressBar;
 
 mod file;
 mod format;
@@ -62,11 +64,30 @@ fn main() -> Result<()> {
     let mut to_from = HashMap::new();
     let fp = format::format_to_formatpieces(&cfg.fmt)?;
 
+    let mut pb = ProgressBar::new(cfg.files.len() as u64);
+    pb.set_max_refresh_rate(Some(Duration::from_millis(100)));
+    pb.message("Reading EXIF data: ");
+
     for file in &cfg.files {
         if let Err(err) = handle_name(&cfg, &mut to_from, file, &fp) {
             eprintln!("failed to get new name for {}: {}", file.display(), err);
+            continue;
         }
+        pb.inc();
     }
+
+    pb.finish_println("");
+
+    let mut pb = ProgressBar::new(cfg.files.len() as u64);
+    pb.set_max_refresh_rate(Some(Duration::from_millis(100)));
+    pb.message(&format!(
+        "{} files: ",
+        if cfg.copy {
+            "    Copying"
+        } else {
+            "   Renaming"
+        }
+    ));
 
     for (to_, froms) in to_from {
         // Starts from 0
@@ -89,8 +110,14 @@ fn main() -> Result<()> {
                 );
                 continue;
             }
-            println!("{} -> {}", from.display(), to);
+            if cfg.verbose {
+                println!("{} -> {}", from.display(), to);
+            } else {
+                pb.inc();
+            }
         }
+
+        pb.finish();
     }
 
     Ok(())
