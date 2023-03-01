@@ -18,4 +18,7 @@ jobs:
       - run: cargo test --release --all-features --all
       - run: cargo build --release --all-features
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
