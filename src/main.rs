@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 
 mod file;
@@ -62,9 +62,11 @@ fn main() -> Result<()> {
     let mut to_from = HashMap::new();
     let fp = format::format_to_formatpieces(&cfg.fmt)?;
 
+    let mut error_seen = false;
     for file in &cfg.files {
         if let Err(err) = handle_name(&cfg, &mut to_from, file, &fp) {
             eprintln!("failed to get new name for {}: {}", file.display(), err);
+            error_seen = true;
         }
     }
 
@@ -76,6 +78,7 @@ fn main() -> Result<()> {
                 Ok(s) => s,
                 Err(err) => {
                     eprintln!("failed to finalise {} -> {}: {}", from.display(), to_, err);
+                    error_seen = true;
                     continue;
                 }
             };
@@ -87,10 +90,15 @@ fn main() -> Result<()> {
                     to,
                     err
                 );
+                error_seen = true;
                 continue;
             }
             println!("{} -> {}", from.display(), to);
         }
+    }
+
+    if error_seen {
+        bail!("see previously mentioned errors")
     }
 
     Ok(())
