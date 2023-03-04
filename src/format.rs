@@ -74,20 +74,19 @@ pub fn format_to_formatpieces(fmt: &str) -> Result<Vec<types::FormatPiece>> {
 
     while let Some(cur) = chars.next() {
         if cur == '}' {
-            match chars.next_if_eq(&'}') {
-                Some(_) => out.push(types::FormatPiece::Char(cur)),
-                None => {
-                    if in_fmt {
-                        match FORMATTERS.iter().find(|&f| f.name == word) {
-                            Some(f) => out.push(types::FormatPiece::Fmt(f)),
-                            None => bail!("invalid field: '{{{word}}}'"),
-                        };
-                        word.clear();
-                        in_fmt = false;
-                        continue;
-                    }
-                    bail!("mismatched '}}' in format");
+            if chars.next_if_eq(&'}').is_some() {
+                out.push(types::FormatPiece::Char(cur));
+            } else {
+                if in_fmt {
+                    match FORMATTERS.iter().find(|&f| f.name == word) {
+                        Some(f) => out.push(types::FormatPiece::Fmt(f)),
+                        None => bail!("invalid field: '{{{word}}}'"),
+                    };
+                    word.clear();
+                    in_fmt = false;
+                    continue;
                 }
+                bail!("mismatched '}}' in format");
             }
         }
 
