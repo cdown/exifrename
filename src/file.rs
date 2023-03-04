@@ -73,8 +73,8 @@ pub fn rename_creating_dirs(
     let ren_samedev = rename(from, &to, overwrite);
 
     if let Err(ref err) = ren_samedev {
-        #[allow(clippy::unnecessary_cast)] // Necessary for Windows only
-        let xdev_err_cast = xdev_err as i32;
+        #[allow(clippy::useless_conversion)] // Necessary for Windows only
+        let xdev_err_cast = xdev_err.try_into()?;
         if err.raw_os_error() == Some(xdev_err_cast) {
             copy_creating_dirs(from, &to, overwrite)?;
             fs::remove_file(from)?;
