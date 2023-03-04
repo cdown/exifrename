@@ -52,8 +52,8 @@ fn render_format(im: &types::ImageMetadata, fmt: &Vec<types::FormatPiece>) -> Re
     // Ballpark guess large enough to usually avoid extra allocations
     let mut out = String::with_capacity(fmt.len() * 4);
     for part in fmt {
-        match part {
-            types::FormatPiece::Char(c) => out.push(*c),
+        match *part {
+            types::FormatPiece::Char(c) => out.push(c),
             types::FormatPiece::Fmt(f) => write!(
                 &mut out,
                 "{}",
