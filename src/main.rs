@@ -36,7 +36,7 @@ fn finalise_name(
     let mut to_mod = to;
 
     if !cfg.no_counter && cnt_width > 0 {
-        write!(&mut to_mod, "_{:0width$}", cnt, width = cnt_width)?;
+        write!(&mut to_mod, "_{cnt:0cnt_width$}")?;
     }
 
     if let Some(ext) = from.extension() {
