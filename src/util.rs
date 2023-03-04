@@ -9,14 +9,14 @@ macro_rules! die {
 #[allow(unused_imports)]
 pub(crate) use die;
 
-pub const fn get_usize_len(value_: usize) -> usize {
-    let mut len = 1;
+pub fn get_usize_len(value_: usize) -> usize {
+    let len: usize = 1;
     let mut value = value_;
     if value == 0 {
         return 0;
     }
     while value > 9 {
-        len += 1;
+        len.checked_add(1).expect("overflow");
         value /= 10;
     }
     len

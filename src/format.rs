@@ -50,7 +50,7 @@ static FORMATTERS: &[types::Formatter] = &[
 
 fn render_format(im: &types::ImageMetadata, fmt: &Vec<types::FormatPiece>) -> Result<String> {
     // Ballpark guess large enough to usually avoid extra allocations
-    let mut out = String::with_capacity(fmt.len() * 4);
+    let mut out = String::with_capacity(fmt.len().checked_mul(4).expect("overflow"));
     for part in fmt {
         match *part {
             types::FormatPiece::Char(c) => out.push(c),
