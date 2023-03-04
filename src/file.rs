@@ -19,6 +19,7 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     let to_c = CString::new(to.as_os_str().as_bytes())?;
     let flags = if overwrite { 0 } else { libc::RENAME_NOREPLACE };
 
+    // SAFETY: Simple FFI
     let ret = unsafe {
         libc::syscall(
             libc::SYS_renameat2,
