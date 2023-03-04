@@ -4,9 +4,10 @@ version = "0.2.0"
 edition = "2021"
 authors = ["Chris Down <chris@chrisdown.name>"]
 description = "Rename or copy files based on EXIF data."
-homepage = "https://github.com/cdown/exifrename"
+repository = "https://github.com/cdown/exifrename"
 readme = "README.md"
 keywords = ["exif", "image", "rename", "organise", "organize"]
+categories = ["command-line-utilities", "filesystem"]
 license = "MIT"
 
 [dependencies]
