@@ -1,9 +1,10 @@
 #[allow(unused_macros)] // Might only be used on Windows
 macro_rules! die {
     ($($arg:tt)*) => {{
-        use std::process;
+        use std::panic;
         eprintln!("fatal: {}", format!($($arg)*));
-        process::exit(1);
+        panic::set_hook(Box::new(|_| {}));
+        panic!(); // Don't use exit() because it does not run destructors
     }}
 }
 #[allow(unused_imports)]
