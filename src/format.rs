@@ -7,8 +7,9 @@ use anyhow::Result;
 use crate::metadata::get_datetime;
 use crate::types;
 use exif::Reader;
+use funcfmt::{FormatPieces, Render};
 
-pub fn get_new_name(path: &Path, fp: &Vec<ftempl::FormatPiece<types::ImageMetadata>>) -> Result<String> {
+pub fn get_new_name(path: &Path, fp: &FormatPieces<types::ImageMetadata>) -> Result<String> {
     let file = fs::File::open(path)?;
     let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let dt = get_datetime(&exif);
@@ -17,8 +18,5 @@ pub fn get_new_name(path: &Path, fp: &Vec<ftempl::FormatPiece<types::ImageMetada
         datetime: dt,
         path: path.to_path_buf(),
     };
-
-    let ret = Ok(ftempl::render(&im, fp)?);
-
-    ret
+    Ok(fp.render(&im)?)
 }

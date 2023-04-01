@@ -161,7 +161,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
- "ftempl",
+ "funcfmt",
  "kamadak-exif",
  "lazy_static",
  "libc",
@@ -179,7 +179,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ftempl"
+name = "funcfmt"
 version = "0.1.0"
 dependencies = [
  "thiserror",

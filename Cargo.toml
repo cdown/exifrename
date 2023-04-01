@@ -16,7 +16,7 @@ clap = { version = "4.2.1", features = ["derive"] }
 kamadak-exif = "0.5.5"
 lazy_static = "1.4.0"
 tempfile = "3.5.0"
-ftempl = { path = "/home/cdown/git/func_template" }
+funcfmt = { path = "/home/cdown/git/func_template" }
 
 [target.'cfg(target_family = "unix")'.dependencies]
 libc = "0.2.140"
