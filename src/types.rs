@@ -2,7 +2,6 @@ use clap::Parser;
 use exif::{DateTime, Exif};
 use std::path::PathBuf;
 
-pub type FormatterCallback = fn(&ImageMetadata) -> Option<String>;
 pub type DatetimeCallback = fn(&DateTime) -> String;
 
 pub struct ImageMetadata {
@@ -84,14 +83,4 @@ pub struct Config {
 
     #[arg(required = true, num_args = 1..)]
     pub files: Vec<PathBuf>,
-}
-
-pub struct Formatter {
-    pub name: &'static str,
-    pub cb: FormatterCallback,
-}
-
-pub enum FormatPiece {
-    Char(char),
-    Fmt(&'static Formatter),
 }
