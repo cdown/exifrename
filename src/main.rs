@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use walkdir::{DirEntry, WalkDir};
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
@@ -92,8 +94,34 @@ fn main() -> Result<()> {
     let fp = formatters.to_format_pieces(&cfg.fmt)?;
 
     let mut error_seen = false;
-    for file in &cfg.files {
-        if let Err(err) = handle_name(&cfg, &mut to_from, file, &fp) {
+    let mut files: Vec<PathBuf> = Vec::with_capacity(cfg.paths.len());
+    let acceptable_ext = ["jpg", "jpeg", "png"];
+    for path in &cfg.paths {
+        if path.is_dir() {
+            let paths: Vec<PathBuf> = WalkDir::new(path)
+                .into_iter()
+                .filter_map(|e| match e {
+                    Ok(val) => Some(val),
+                    Err(err) => {
+                        eprintln!("{err}");
+                        None
+                    }
+                })
+                .filter(|e| e.file_type().is_file())
+                .map(DirEntry::into_path)
+                .filter(|p| {
+                    let ext = p.extension().and_then(OsStr::to_str).unwrap_or("");
+                    acceptable_ext.into_iter().any(|x| x == ext.to_lowercase())
+                })
+                .collect();
+            files.extend(paths);
+        } else if path.is_file() {
+            files.push(path.clone());
+        }
+    }
+
+    for file in files {
+        if let Err(err) = handle_name(&cfg, &mut to_from, &file, &fp) {
             eprintln!("failed to get new name for {}: {}", file.display(), err);
             error_seen = true;
         }

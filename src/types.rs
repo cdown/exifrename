@@ -82,5 +82,5 @@ pub struct Config {
     pub copy: bool,
 
     #[arg(required = true, num_args = 1..)]
-    pub files: Vec<PathBuf>,
+    pub paths: Vec<PathBuf>,
 }
