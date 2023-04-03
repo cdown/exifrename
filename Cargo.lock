@@ -185,9 +185,9 @@ dependencies = [
 
 [[package]]
 name = "funcfmt"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb04c8b99d22f7410a91e8da51366cc7b39d6729eaf8a5a6a0e8acdb643d0054"
+checksum = "439f5e50ee56cb7f2269e4e2938cb58319b417c4e8d5b0efdada2dd94f9b3595"
 dependencies = [
  "smartstring",
  "thiserror",
