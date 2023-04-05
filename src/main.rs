@@ -110,8 +110,12 @@ fn main() -> Result<()> {
                 .filter(|e| e.file_type().is_file())
                 .map(DirEntry::into_path)
                 .filter(|p| {
-                    let ext = p.extension().and_then(OsStr::to_str).unwrap_or("");
-                    acceptable_ext.into_iter().any(|x| x == ext.to_lowercase())
+                    let ext = p
+                        .extension()
+                        .and_then(OsStr::to_str)
+                        .unwrap_or("")
+                        .to_lowercase();
+                    acceptable_ext.into_iter().any(|x| x == ext)
                 })
                 .collect();
             files.extend(paths);
