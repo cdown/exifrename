@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Write;
@@ -7,28 +8,13 @@ use walkdir::{DirEntry, WalkDir};
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use exif::Tag;
-use funcfmt::{fm, FormatMap, FormatPieces, ToFormatPieces};
+use funcfmt::{fm, FormatMap, ToFormatPieces};
 
 mod file;
 mod format;
 mod metadata;
 mod types;
 mod util;
-
-fn handle_name(
-    cfg: &types::Config,
-    to_from: &mut HashMap<String, Vec<PathBuf>>,
-    file: &Path,
-    fp: &FormatPieces<types::ImageMetadata>,
-) -> Result<()> {
-    let new_name = format::get_new_name(file, fp)?;
-    if cfg.verbose {
-        println!("Read EXIF from {}, new intermediate format is {}", file.display(), new_name);
-    }
-    let entry = to_from.entry(new_name).or_insert_with(Vec::new);
-    (*entry).push(file.to_path_buf());
-    Ok(())
-}
 
 fn finalise_name(
     cfg: &types::Config,
@@ -124,11 +110,39 @@ fn main() -> Result<()> {
         }
     }
 
-    for file in files {
-        if let Err(err) = handle_name(&cfg, &mut to_from, &file, &fp) {
-            eprintln!("failed to get new name for {}: {}", file.display(), err);
-            error_seen = true;
-        }
+    struct NameResult {
+        name: Option<String>,
+        file: PathBuf,
+    }
+
+    let names = files
+        .into_par_iter()
+        .map(|file| {
+            let new_name = format::get_new_name(&file, &fp);
+            if let Err(err) = new_name {
+                eprintln!("failed to get new name for {}: {}", file.display(), err);
+                return NameResult { name: None, file };
+            }
+            let new_name = new_name.unwrap();
+            if cfg.verbose {
+                println!(
+                    "Read EXIF from {}, new intermediate format is {}",
+                    file.display(),
+                    new_name
+                );
+            }
+            NameResult {
+                name: Some(new_name),
+                file,
+            }
+        })
+        .collect::<Vec<NameResult>>();
+
+    error_seen |= names.iter().any(|v| matches!(v.name, None));
+
+    for nr in names.into_iter().filter(|n| n.name.is_some()) {
+        let entry = to_from.entry(nr.name.unwrap()).or_insert_with(Vec::new);
+        (*entry).push(nr.file);
     }
 
     for (to_, froms) in to_from {
