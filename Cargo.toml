@@ -9,6 +9,7 @@ readme = "README.md"
 keywords = ["exif", "image", "rename", "organise", "organize"]
 categories = ["command-line-utilities", "filesystem"]
 license = "MIT"
+rust-version = "1.64.0"
 
 [dependencies]
 anyhow = "1.0.70"
