@@ -80,11 +80,10 @@ fn main() -> Result<()> {
     let fp = formatters.to_format_pieces(&cfg.fmt)?;
 
     let mut error_seen = false;
-    let mut files: Vec<PathBuf> = Vec::with_capacity(cfg.paths.len());
     let acceptable_ext = ["jpg", "jpeg", "png"];
-    for path in &cfg.paths {
+    let files = cfg.paths.par_iter().flat_map(|path| {
         if path.is_dir() {
-            let paths: Vec<PathBuf> = WalkDir::new(path)
+            WalkDir::new(path)
                 .into_iter()
                 .filter_map(|e| match e {
                     Ok(val) => Some(val),
@@ -103,12 +102,11 @@ fn main() -> Result<()> {
                         .to_lowercase();
                     acceptable_ext.into_iter().any(|x| x == ext)
                 })
-                .collect();
-            files.extend(paths);
-        } else if path.is_file() {
-            files.push(path.clone());
+                .collect::<Vec<PathBuf>>()
+        } else {
+            vec![path.clone()]
         }
-    }
+    });
 
     struct NameResult {
         name: Option<String>,
