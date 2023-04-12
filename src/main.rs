@@ -48,6 +48,11 @@ fn handle_file(cfg: &types::Config, from: &Path, to: &str) -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    struct NameResult {
+        name: Option<String>,
+        file: PathBuf,
+    }
+
     let formatters: funcfmt::FormatMap<types::ImageMetadata> = FormatMap::from([
         // Date/time attributes
         fm!("year", |im| metadata::get_datetime_field(im, |d| format!("{}", d.year))),
@@ -107,11 +112,6 @@ fn main() -> Result<()> {
             vec![path.clone()]
         }
     });
-
-    struct NameResult {
-        name: Option<String>,
-        file: PathBuf,
-    }
 
     let names = files
         .into_par_iter()
