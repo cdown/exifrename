@@ -13,9 +13,10 @@ pub struct ImageMetadata {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Config {
-    /// The format to apply to files, excluding the extension. Substitutions can be applied inside
-    /// curly brackets, for example with {year2} to get the two digit year. Any formats returning
-    /// data with "/" will have it transformed to "_".
+    /// The format to apply to files, excluding the extension.
+    ///
+    /// Substitutions can be applied inside curly brackets, for example with {year2} to get the two
+    /// digit year. Any formats returning data with "/" will have it transformed to "_".
     ///
     /// Available formats:
     ///
