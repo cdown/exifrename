@@ -16,7 +16,7 @@ anyhow = "1.0.70"
 clap = { version = "4.2.2", features = ["derive"] }
 kamadak-exif = "0.5.5"
 tempfile = "3.5.0"
-funcfmt = "0.2.0"
+funcfmt = "0.3.0"
 walkdir = "2.3.3"
 rayon = "1.7.0"
 
