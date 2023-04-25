@@ -8,7 +8,7 @@ use walkdir::{DirEntry, WalkDir};
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use exif::Tag;
-use funcfmt::{fm, FormatMap, ToFormatPieces};
+use funcfmt::{fm, ToFormatPieces};
 
 mod file;
 mod format;
@@ -53,32 +53,32 @@ fn main() -> Result<()> {
         file: PathBuf,
     }
 
-    let formatters: funcfmt::FormatMap<types::ImageMetadata> = FormatMap::from([
+    let formatters: funcfmt::FormatMap<types::ImageMetadata> = fm!(
         // Date/time attributes
-        fm!("year", |im| metadata::get_datetime_field(im, |d| format!("{}", d.year))),
-        fm!("year2", |im| metadata::get_datetime_field(im, |d| format!("{}", d.year % 100))),
-        fm!("month", |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.month))),
-        fm!("day", |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.day))),
-        fm!("hour", |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.hour))),
-        fm!("minute", |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.minute))),
-        fm!("second", |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.second))),
+        "year" => |im| metadata::get_datetime_field(im, |d| format!("{}", d.year)),
+        "year2" => |im| metadata::get_datetime_field(im, |d| format!("{}", d.year % 100)),
+        "month" => |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.month)),
+        "day" => |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.day)),
+        "hour" => |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.hour)),
+        "minute" => |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.minute)),
+        "second" => |im| metadata::get_datetime_field(im, |d| format!("{:02}", d.second)),
         // Exposure attributes
-        fm!("fstop", |im| metadata::get_exif_field(im, Tag::FNumber)),
-        fm!("iso", |im| metadata::get_exif_field(im, Tag::PhotographicSensitivity)), // TODO: check SensitivityType/0x8830?
-        fm!("shutter_speed", |im| metadata::get_exif_field(im, Tag::ExposureTime)), // non-APEX, which has a useful display value
+        "fstop" => |im| metadata::get_exif_field(im, Tag::FNumber),
+        "iso" => |im| metadata::get_exif_field(im, Tag::PhotographicSensitivity), // TODO: check SensitivityType/0x8830?
+        "shutter_speed" => |im| metadata::get_exif_field(im, Tag::ExposureTime), // non-APEX, which has a useful display value
         // Camera attributes
-        fm!("camera_make", |im| metadata::get_exif_field(im, Tag::Make)),
-        fm!("camera_model", |im| metadata::get_exif_field(im, Tag::Model)),
-        fm!("camera_serial", |im| metadata::get_exif_field(im, Tag::BodySerialNumber)),
+        "camera_make" => |im| metadata::get_exif_field(im, Tag::Make),
+        "camera_model" => |im| metadata::get_exif_field(im, Tag::Model),
+        "camera_serial" => |im| metadata::get_exif_field(im, Tag::BodySerialNumber),
         // Lens attributes
-        fm!("lens_make", |im| metadata::get_exif_field(im, Tag::LensMake)),
-        fm!("lens_model", |im| metadata::get_exif_field(im, Tag::LensModel)),
-        fm!("lens_serial", |im| metadata::get_exif_field(im, Tag::LensSerialNumber)),
-        fm!("focal_length", |im| metadata::get_exif_field(im, Tag::FocalLength)),
-        fm!("focal_length_35", |im| metadata::get_exif_field(im, Tag::FocalLengthIn35mmFilm)),
+        "lens_make" => |im| metadata::get_exif_field(im, Tag::LensMake),
+        "lens_model" => |im| metadata::get_exif_field(im, Tag::LensModel),
+        "lens_serial" => |im| metadata::get_exif_field(im, Tag::LensSerialNumber),
+        "focal_length" => |im| metadata::get_exif_field(im, Tag::FocalLength),
+        "focal_length_35" => |im| metadata::get_exif_field(im, Tag::FocalLengthIn35mmFilm),
         // Filesystem attributes
-        fm!("filename", metadata::get_original_filename),
-    ]);
+        "filename" => metadata::get_original_filename,
+    );
 
     let cfg = types::Config::parse();
     let mut to_from = HashMap::new();
