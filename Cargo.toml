@@ -13,7 +13,7 @@ rust-version = "1.64.0"
 
 [dependencies]
 anyhow = "1.0.70"
-clap = { version = "4.2.4", features = ["derive"] }
+clap = { version = "4.2.5", features = ["derive"] }
 kamadak-exif = "0.5.5"
 tempfile = "3.5.0"
 funcfmt = "0.3.0"
