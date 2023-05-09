@@ -116,12 +116,13 @@ fn main() -> Result<()> {
     let names = files
         .into_par_iter()
         .map(|file| {
-            let new_name = format::get_new_name(&file, &fp);
-            if let Err(err) = new_name {
-                eprintln!("failed to get new name for {}: {}", file.display(), err);
-                return NameResult { name: None, file };
-            }
-            let new_name = new_name.unwrap();
+            let new_name = match format::get_new_name(&file, &fp) {
+                Ok(new_name) => new_name,
+                Err(err) => {
+                    eprintln!("failed to get new name for {}: {}", file.display(), err);
+                    return NameResult { name: None, file };
+                }
+            };
             if cfg.verbose {
                 println!(
                     "Read EXIF from {}, new intermediate format is {}",
