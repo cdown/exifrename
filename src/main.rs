@@ -146,14 +146,14 @@ fn main() -> Result<()> {
         }
     }
 
-    for (to_, froms) in to_from {
+    for (to, froms) in to_from {
         // Starts from 0
         let cnt_width = util::get_usize_len(froms.len().checked_sub(1).expect("underflow"));
         for (cnt, from) in froms.iter().enumerate() {
-            let to = match finalise_name(&cfg, from, to_.clone(), cnt, cnt_width) {
+            let to = match finalise_name(&cfg, from, to.clone(), cnt, cnt_width) {
                 Ok(s) => s,
                 Err(err) => {
-                    eprintln!("failed to finalise {} -> {}: {}", from.display(), to_, err);
+                    eprintln!("failed to finalise {} -> {}: {}", from.display(), to, err);
                     error_seen = true;
                     continue;
                 }
