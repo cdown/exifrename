@@ -139,9 +139,11 @@ fn main() -> Result<()> {
 
     error_seen |= names.iter().any(|v| v.name.is_none());
 
-    for nr in names.into_iter().filter(|n| n.name.is_some()) {
-        let entry = to_from.entry(nr.name.unwrap()).or_insert_with(Vec::new);
-        (*entry).push(nr.file);
+    for nr in names {
+        if let Some(name) = nr.name {
+            let entry = to_from.entry(name).or_insert_with(Vec::new);
+            (*entry).push(nr.file);
+        }
     }
 
     for (to_, froms) in to_from {
