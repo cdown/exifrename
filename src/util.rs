@@ -17,7 +17,7 @@ pub fn get_usize_len(value_: usize) -> usize {
         return 0;
     }
     while value > 9 {
-        len = len.checked_add(1).expect("overflow");
+        len += 1;
         value /= 10;
     }
     len
