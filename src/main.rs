@@ -148,7 +148,7 @@ fn main() -> Result<()> {
 
     for (to, froms) in to_from {
         // Starts from 0
-        let cnt_width = util::get_usize_len(froms.len().checked_sub(1).expect("underflow"));
+        let cnt_width = util::get_usize_len(froms.len() - 1);
         for (cnt, from) in froms.iter().enumerate() {
             let to = match finalise_name(&cfg, from, to.clone(), cnt, cnt_width) {
                 Ok(s) => s,
