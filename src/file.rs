@@ -49,7 +49,7 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
 
 pub fn copy_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool) -> Result<()> {
     let to = to_raw.into();
-    let to_parent = to.parent().context("refusing to move to filesystem root")?;
+    let to_parent = to.parent().context("refusing to copy to filesystem root")?;
     fs::create_dir_all(to_parent)?;
     let tmp_path = NamedTempFile::new_in(to_parent)?.into_temp_path();
     fs::copy(from, &tmp_path)?;
