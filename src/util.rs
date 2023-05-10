@@ -10,7 +10,7 @@ macro_rules! die {
 #[allow(unused_imports)]
 pub(crate) use die;
 
-pub fn get_usize_len(value_: usize) -> usize {
+pub const fn get_usize_len(value_: usize) -> usize {
     let mut len: usize = 1;
     let mut value = value_;
     if value == 0 {
