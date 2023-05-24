@@ -1,40 +1,56 @@
 jobs:
-  build:
-    name: Build
+  #  build:
+  #    name: Build
+  #    strategy:
+  #      matrix:
+  #        os: [ubuntu-latest, macos-latest, windows-latest]
+  #    runs-on: ${{ matrix.os }}
+  #    steps:
+  #      - uses: actions/checkout@v3
+  #      - uses: dtolnay/rust-toolchain@stable
+  #      - uses: swatinem/rust-cache@v2
+  #      - run: cargo build
+  #
+  #  test:
+  #    name: Test
+  #    strategy:
+  #      matrix:
+  #        os: [ubuntu-latest, macos-latest, windows-latest]
+  #    runs-on: ${{ matrix.os }}
+  #    steps:
+  #      - uses: actions/checkout@v3
+  #      - uses: dtolnay/rust-toolchain@stable
+  #      - uses: swatinem/rust-cache@v2
+  #      - run: cargo test
+  #
+  #  lint:
+  #    name: Lint
+  #    strategy:
+  #      matrix:
+  #        os: [ubuntu-latest, macos-latest, windows-latest]
+  #    runs-on: ${{ matrix.os }}
+  #    steps:
+  #      - uses: actions/checkout@v3
+  #      - uses: dtolnay/rust-toolchain@stable
+  #      - uses: swatinem/rust-cache@v2
+  #      - run: cargo fmt --all -- --check
+  #      - run: cargo clippy -- -D warnings
+  #
+  msrv:
+    name: MSRV
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        #os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
-      - run: cargo build
-
-  test:
-    name: Test
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - run: cargo test
-
-  lint:
-    name: Lint
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy -- -D warnings
+      #- if: matrix.os == 'windows-latest'
+      #  run: rustup install 1.64.0-x86_64-pc-windows-msvc
+      - run: cargo install --debug cargo-msrv
+      - run: cargo msrv verify
 
 on:
   push:
