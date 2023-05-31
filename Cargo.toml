@@ -1,6 +1,6 @@
 [package]
 name = "exifrename"
-version = "0.3.1"
+version = "1.0.0"
 edition = "2021"
 authors = ["Chris Down <chris@chrisdown.name>"]
 description = "Rename or copy files based on EXIF data."
