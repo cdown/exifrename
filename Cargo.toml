@@ -15,7 +15,7 @@ rust-version = "1.64.0"
 anyhow = "1.0.75"
 clap = { version = "4.3.11", features = ["std", "derive", "help"], default-features = false }
 kamadak-exif = "0.5.5"
-tempfile = "3.6.0"
+tempfile = "3.8.0"
 funcfmt = "0.3.0"
 walkdir = "2.3.3"
 rayon = "1.7.0"
