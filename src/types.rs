@@ -50,6 +50,10 @@ pub struct Config {
     ///   focal_length
     ///   focal_length_35  (Focal length in 35mm equivalent)
     ///
+    /// FILENAME:
+    ///
+    ///   filename  (Filename without original extension)
+    ///
     /// LITERAL:
     ///
     ///   {{ and }} indicate literal brackets.
