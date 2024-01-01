@@ -12,7 +12,7 @@ license = "MIT"
 rust-version = "1.64.0"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.78"
 clap = { version = "4.4.10", features = ["std", "derive", "help"], default-features = false }
 kamadak-exif = "0.5.5"
 tempfile = "3.8.1"
