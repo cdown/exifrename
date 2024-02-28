@@ -18,7 +18,7 @@ kamadak-exif = "0.5.5"
 tempfile = "3.8.1"
 funcfmt = "0.3.0"
 walkdir = "2.4.0"
-rayon = "1.8.0"
+rayon = "1.9.0"
 
 [target.'cfg(target_family = "unix")'.dependencies]
 libc = "0.2.150"
