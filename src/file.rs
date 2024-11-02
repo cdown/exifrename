@@ -38,7 +38,7 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_family = "windows")))]
+#[cfg(not(any(target_os = "linux", target_family = "windows", target_os = "macos")))]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use crate::util::die;
     if !overwrite {
@@ -77,6 +77,27 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
         Err(io::Error::from_raw_os_error(err as i32))
     } else {
         Ok(())
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
+    use std::ffi::CString;
+    use std::os::unix::ffi::OsStrExt;
+
+    let from_c = CString::new(from.as_os_str().as_bytes())?;
+    let to_c = CString::new(to.as_os_str().as_bytes())?;
+    let flags = if overwrite { 0 } else { libc::RENAME_EXCL };
+
+    // SAFETY: Simple FFI
+    let ret = unsafe {
+        libc::renameatx_np(libc::AT_FDCWD, from_c.as_ptr(), libc::AT_FDCWD, to_c.as_ptr(), flags)
+    };
+
+    if ret == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
     }
 }
 
