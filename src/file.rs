@@ -70,7 +70,7 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use crate::util::die;
     if !overwrite {
-        die!("overwrite-free rename not implemented for non-Linux");
+        die!("Overwrite-free rename not implemented on this operating system. Use --overwrite.");
     }
     fs::rename(from, to)
 }
