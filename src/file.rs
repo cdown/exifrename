@@ -38,13 +38,46 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_family = "windows")))]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use crate::util::die;
     if !overwrite {
         die!("overwrite-free rename not implemented for non-Linux");
     }
     fs::rename(from, to)
+}
+
+#[cfg(target_family = "windows")]
+fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::um::errhandlingapi::GetLastError;
+    use winapi::um::winbase::{MoveFileExW, MOVEFILE_COPY_ALLOWED, MOVEFILE_REPLACE_EXISTING};
+
+    let from_wide: Vec<u16> = from
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let to_wide: Vec<u16> = to
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut flags = MOVEFILE_COPY_ALLOWED;
+    if overwrite {
+        flags |= MOVEFILE_REPLACE_EXISTING;
+    }
+
+    // SAFETY: Simple FFI
+    let ret = unsafe { MoveFileExW(from_wide.as_ptr(), to_wide.as_ptr(), flags) };
+
+    if ret == 0 {
+        let err = unsafe { GetLastError() };
+        Err(io::Error::from_raw_os_error(err as i32))
+    } else {
+        Ok(())
+    }
 }
 
 pub fn copy_creating_dirs(from: &Path, to_raw: impl Into<PathBuf>, overwrite: bool) -> Result<()> {
