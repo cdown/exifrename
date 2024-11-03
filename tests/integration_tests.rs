@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[cfg(target_os = "linux")] // Others must use --overwrite
+#[cfg(any(target_os = "linux", target_family = "windows"))] // Others must use --overwrite
 #[test]
 fn test_rename_no_overwrite() -> Result<()> {
     // Set up test environment
