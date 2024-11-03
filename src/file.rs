@@ -49,13 +49,7 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
 
     // SAFETY: Simple FFI
     let ret = unsafe {
-        libc::renameatx_np(
-            libc::AT_FDCWD,
-            from_c.as_ptr(),
-            libc::AT_FDCWD,
-            to_c.as_ptr(),
-            flags
-        )
+        libc::renameatx_np(libc::AT_FDCWD, from_c.as_ptr(), libc::AT_FDCWD, to_c.as_ptr(), flags)
     };
 
     if ret == 0 {
@@ -64,7 +58,6 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
         Err(io::Error::last_os_error())
     }
 }
-
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
