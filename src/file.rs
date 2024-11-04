@@ -51,7 +51,7 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
     use winapi::um::errhandlingapi::GetLastError;
-    use winapi::um::winbase::{MoveFileExW, MOVEFILE_COPY_ALLOWED, MOVEFILE_REPLACE_EXISTING};
+    use winapi::um::winbase::{MoveFileExW, MOVEFILE_REPLACE_EXISTING};
 
     let from_wide: Vec<u16> = from
         .as_os_str()
@@ -64,13 +64,22 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
         .chain(std::iter::once(0))
         .collect();
 
-    let mut flags = MOVEFILE_COPY_ALLOWED;
-    if overwrite {
-        flags |= MOVEFILE_REPLACE_EXISTING;
-    }
+    let flags = if overwrite {
+        MOVEFILE_REPLACE_EXISTING
+    } else {
+        0
+    };
 
-    // SAFETY: Simple FFI
+    dbg!(to.exists());
+    dbg!(overwrite);
+    dbg!(flags);
+
+    dbg!(String::from_utf16(&from_wide));
+    dbg!(String::from_utf16(&to_wide));
+
     let ret = unsafe { MoveFileExW(from_wide.as_ptr(), to_wide.as_ptr(), flags) };
+
+    dbg!(ret);
 
     if ret == 0 {
         let err = unsafe { GetLastError() };

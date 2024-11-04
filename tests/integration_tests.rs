@@ -8,6 +8,8 @@ fn test_rename_no_overwrite() -> Result<()> {
     let temp_path = temp_dir.path();
 
     std::fs::copy("tests/data/1.jpg", temp_path.join("1.jpg"))?;
+    
+    dbg!("at 1");
 
     let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
     cmd.arg(temp_path)
@@ -16,6 +18,7 @@ fn test_rename_no_overwrite() -> Result<()> {
         .current_dir(temp_path)
         .assert()
         .success();
+    dbg!("at 2");
 
     let expected_name = "2023_01.jpg";
     assert!(temp_path.join(expected_name).exists());
@@ -28,6 +31,7 @@ fn test_rename_no_overwrite() -> Result<()> {
         .current_dir(temp_path)
         .assert()
         .failure();
+    dbg!("at 3");
 
     Ok(())
 }
