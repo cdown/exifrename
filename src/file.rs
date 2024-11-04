@@ -8,7 +8,7 @@ use tempfile::NamedTempFile;
 #[cfg(target_family = "unix")]
 use libc::EXDEV as xdev_err;
 #[cfg(target_family = "windows")]
-use winapi::shared::winerror::ERROR_NOT_SAME_DEVICE as xdev_err;
+use windows_sys::Win32::Foundation::ERROR_NOT_SAME_DEVICE as xdev_err;
 
 #[cfg(target_os = "linux")]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
@@ -50,31 +50,30 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
 #[cfg(target_family = "windows")]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
-    use winapi::um::errhandlingapi::GetLastError;
-    use winapi::um::winbase::{MoveFileExW, MOVEFILE_COPY_ALLOWED, MOVEFILE_REPLACE_EXISTING};
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_REPLACE_EXISTING};
 
-    let from_wide: Vec<u16> = from
-        .as_os_str()
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
-    let to_wide: Vec<u16> = to
-        .as_os_str()
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
-
-    let mut flags = MOVEFILE_COPY_ALLOWED;
-    if overwrite {
-        flags |= MOVEFILE_REPLACE_EXISTING;
+    fn to_wide(path: &Path) -> Vec<u16> {
+        path.as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
     }
 
-    // SAFETY: Simple FFI
+    let from_wide = to_wide(from);
+    let to_wide = to_wide(to);
+
+    let flags = if overwrite {
+        MOVEFILE_REPLACE_EXISTING
+    } else {
+        0
+    };
+
+    // SAFETY: Simple FFI, strings are null terminated above
     let ret = unsafe { MoveFileExW(from_wide.as_ptr(), to_wide.as_ptr(), flags) };
 
     if ret == 0 {
-        let err = unsafe { GetLastError() };
-        Err(io::Error::from_raw_os_error(err as i32))
+        Err(io::Error::from_raw_os_error(unsafe { GetLastError() } as i32))
     } else {
         Ok(())
     }
