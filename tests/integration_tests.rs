@@ -1,17 +1,17 @@
 use anyhow::Result;
+use std::fs;
 
 #[cfg(any(target_os = "linux", target_family = "windows", target_os = "macos"))] // Others must use --overwrite
 #[test]
 fn test_rename_no_overwrite() -> Result<()> {
-    // Set up test environment
     let from_dir = tempfile::tempdir()?;
     let from_path = from_dir.path();
-
     let to_dir = tempfile::tempdir()?;
     let to_path = to_dir.path();
 
-    std::fs::copy("tests/data/1.jpg", from_path.join("1.jpg"))?;
+    fs::copy("tests/data/1.jpg", from_path.join("1.jpg"))?;
 
+    // First run: should succeed
     let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
     cmd.arg(from_path)
         .arg("--copy")
@@ -24,7 +24,7 @@ fn test_rename_no_overwrite() -> Result<()> {
     let expected_name = "2023_01.jpg";
     assert!(to_path.join(expected_name).exists());
 
-    // No --overwrite, so should fail
+    // Second run without overwrite: should fail
     let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
     cmd.arg(from_path)
         .arg("--copy")
@@ -41,12 +41,12 @@ fn test_rename_no_overwrite() -> Result<()> {
 fn test_rename_overwrite() -> Result<()> {
     let from_dir = tempfile::tempdir()?;
     let from_path = from_dir.path();
-
     let to_dir = tempfile::tempdir()?;
     let to_path = to_dir.path();
 
-    std::fs::copy("tests/data/1.jpg", from_path.join("1.jpg"))?;
+    fs::copy("tests/data/1.jpg", from_path.join("1.jpg"))?;
 
+    // First run with overwrite: should succeed
     let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
     cmd.arg(from_path)
         .arg("--overwrite")
@@ -57,7 +57,7 @@ fn test_rename_overwrite() -> Result<()> {
         .assert()
         .success();
 
-    // With --overwrite, it should succeed even when run again
+    // Second run with overwrite: should also succeed
     let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
     cmd.arg(from_path)
         .arg("--overwrite")
