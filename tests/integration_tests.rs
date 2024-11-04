@@ -1,4 +1,5 @@
 use anyhow::Result;
+use predicates::prelude::*;
 use std::fs;
 
 #[cfg(any(target_os = "linux", target_family = "windows", target_os = "macos"))] // Others must use --overwrite
@@ -141,6 +142,28 @@ fn test_no_counter_allow_overwrite() -> Result<()> {
         .current_dir(to_path)
         .assert()
         .success();
+
+    Ok(())
+}
+
+#[test]
+fn test_missing_exif() -> Result<()> {
+    let from_dir = tempfile::tempdir()?;
+    let from_path = from_dir.path();
+    let to_dir = tempfile::tempdir()?;
+    let to_path = to_dir.path();
+
+    fs::copy("tests/data/noexif.jpg", from_path.join("noexif.jpg"))?;
+
+    let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
+    cmd.arg(from_path)
+        .arg("--copy")
+        .arg("-f")
+        .arg("{year}")
+        .current_dir(to_path)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed to get new name"));
 
     Ok(())
 }
