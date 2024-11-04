@@ -8,7 +8,7 @@ use tempfile::NamedTempFile;
 #[cfg(target_family = "unix")]
 use libc::EXDEV as xdev_err;
 #[cfg(target_family = "windows")]
-use winapi::shared::winerror::ERROR_NOT_SAME_DEVICE as xdev_err;
+use windows_sys::Win32::Foundation::ERROR_NOT_SAME_DEVICE as xdev_err;
 
 #[cfg(target_os = "linux")]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
@@ -50,18 +50,19 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
 #[cfg(target_family = "windows")]
 fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
-    use winapi::um::errhandlingapi::GetLastError;
-    use winapi::um::winbase::{MoveFileExW, MOVEFILE_REPLACE_EXISTING};
+    use windows_sys::Win32::Foundation::GetLastError;
+    use windows_sys::Win32::Storage::FileSystem::{GetFileAttributesW, MoveFileExW, MOVEFILE_REPLACE_EXISTING};
+    use std::{iter, ptr};
 
     let from_wide: Vec<u16> = from
         .as_os_str()
         .encode_wide()
-        .chain(std::iter::once(0))
+        .chain(iter::once(0))
         .collect();
     let to_wide: Vec<u16> = to
         .as_os_str()
         .encode_wide()
-        .chain(std::iter::once(0))
+        .chain(iter::once(0))
         .collect();
 
     let flags = if overwrite {
@@ -70,16 +71,24 @@ fn rename(from: &Path, to: &Path, overwrite: bool) -> io::Result<()> {
         0
     };
 
-    dbg!(to.exists());
-    dbg!(overwrite);
-    dbg!(flags);
+    // Initial debug output
+    dbg!(from);
+    dbg!(to);
+    dbg!(to.exists(), overwrite, flags);
 
-    dbg!(String::from_utf16(&from_wide));
-    dbg!(String::from_utf16(&to_wide));
+    // Check file attributes of the destination file `to`
+    let to_attributes = unsafe { GetFileAttributesW(to_wide.as_ptr()) };
+    dbg!(to_attributes);
 
+    // Additional metadata check before the rename
+    dbg!(std::fs::metadata(to));
+    
+    // Attempt the rename operation
     let ret = unsafe { MoveFileExW(from_wide.as_ptr(), to_wide.as_ptr(), flags) };
 
+    // Recheck existence after attempting the rename
     dbg!(ret);
+    dbg!(to.exists());
 
     if ret == 0 {
         let err = unsafe { GetLastError() };

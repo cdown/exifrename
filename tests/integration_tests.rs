@@ -8,7 +8,7 @@ fn test_rename_no_overwrite() -> Result<()> {
     let temp_path = temp_dir.path();
 
     std::fs::copy("tests/data/1.jpg", temp_path.join("1.jpg"))?;
-    
+
     dbg!("at 1");
 
     let mut cmd = assert_cmd::Command::cargo_bin("exifrename")?;
