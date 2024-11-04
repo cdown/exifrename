@@ -12,19 +12,19 @@ license = "MIT"
 rust-version = "1.74"
 
 [dependencies]
-anyhow = "1.0.91"
+anyhow = { version = "1.0.91", features = ["std"], default-features = false }
 clap = { version = "4.5.20", features = ["std", "derive", "help"], default-features = false }
-kamadak-exif = "0.5.5"
-tempfile = "3.13.0"
-funcfmt = "0.3.0"
-walkdir = "2.5.0"
-rayon = "1.10.0"
+kamadak-exif = { version = "0.5.5", default-features = false }
+tempfile = { version = "3.13.0", default-features = false }
+funcfmt = { version = "0.3.0", default-features = false }
+walkdir = { version = "2.5.0", default-features = false }
+rayon = { version = "1.10.0", default-features = false }
 
 [target.'cfg(target_family = "unix")'.dependencies]
-libc = "0.2.161"
+libc = { version = "0.2.161", default-features = false }
 
 [target.'cfg(target_family = "windows")'.dependencies]
-windows-sys = "0.59.0"
+windows-sys = { version = "0.59.0", default-features = false }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
