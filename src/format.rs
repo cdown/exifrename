@@ -11,9 +11,7 @@ use funcfmt::{FormatPieces, Render};
 
 pub fn get_new_name(path: &Path, fp: &FormatPieces<types::ImageMetadata>) -> Result<String> {
     let file = fs::File::open(path)?;
-    let exif = Reader::new()
-        .read_from_container(&mut io::BufReader::new(&file))
-        .map_err(|e| anyhow::anyhow!("Failed to read EXIF data: {:?}", e))?;
+    let exif = Reader::new().read_from_container(&mut io::BufReader::new(&file))?;
     let dt = get_datetime(&exif);
     let im = types::ImageMetadata {
         exif,
