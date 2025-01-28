@@ -15,7 +15,7 @@ rust-version = "1.74"
 anyhow = { version = "1.0.93", features = ["std"], default-features = false }
 clap = { version = "4.5.21", features = ["std", "derive", "help"], default-features = false }
 kamadak-exif = { version = "0.6.1", default-features = false }
-tempfile = { version = "3.14.0", default-features = false }
+tempfile = { version = "3.16.0", default-features = false }
 funcfmt = { version = "0.3.0", default-features = false }
 walkdir = { version = "2.5.0", default-features = false }
 rayon = { version = "1.10.0", default-features = false }
@@ -29,4 +29,4 @@ windows-sys = { version = "0.59.0", default-features = false }
 [dev-dependencies]
 assert_cmd = "2.0.16"
 predicates = "3.1.2"
-tempfile = "3.14.0"
+tempfile = "3.16.0"
